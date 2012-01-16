@@ -42,7 +42,7 @@ import Control.Monad.State
 import Network.DBus.Signature
 
 data DbusEndian = LE | BE deriving (Show,Eq)
-type DbusGet = (DbusEndian, Int)
+type DbusGet = (DbusEndian, Int) -- Specified endianness and alignment of this context.
 
 newtype GetWire a = GetWire { runGW :: ReaderT DbusGet Get a }
 	deriving (Monad, MonadReader DbusGet, Functor)
