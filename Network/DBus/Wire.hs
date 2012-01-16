@@ -1,4 +1,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- |
+-- Module      : Network.DBus.Wire
+-- License     : BSD-style
+-- Maintainer  : Vincent Hanquez <vincent@snarc.org>
+-- Stability   : experimental
+-- Portability : unknown
+--
 module Network.DBus.Wire
 	( DbusEndian(..)
 	-- * getter

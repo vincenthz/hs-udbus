@@ -1,4 +1,11 @@
 {-# LANGUAGE Rank2Types #-}
+-- |
+-- Module      : Network.DBus.Type
+-- License     : BSD-style
+-- Maintainer  : Vincent Hanquez <vincent@snarc.org>
+-- Stability   : experimental
+-- Portability : unknown
+--
 module Network.DBus.Type
 	(
 	  ObjectPath

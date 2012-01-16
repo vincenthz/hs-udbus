@@ -1,4 +1,11 @@
 {-# LANGUAGE MagicHash #-}
+-- |
+-- Module      : Network.DBus.IEEE754
+-- License     : BSD-style
+-- Maintainer  : Vincent Hanquez <vincent@snarc.org>
+-- Stability   : experimental
+-- Portability : unknown
+--
 module Network.DBus.IEEE754 (encode, decode) where
 
 import GHC.Prim
