@@ -24,7 +24,6 @@ Flag executable
 
 Library
   Build-Depends:     base >= 3 && < 5
-                   , cereal >= 0.3.0
                    , binary
                    , bytestring
                    , network
