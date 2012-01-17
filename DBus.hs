@@ -12,7 +12,7 @@ dbusDestination = "org.freedesktop.DBus"
 dbusPath        = "/org/freedesktop/DBus"
 dbusInterface   = "org.freedesktop.DBus"
 
-mainDbus uid = do
+mainDBus uid = do
 	ctx <- busGetSession
 	authenticateUID ctx uid
 	let msg = msgMethodCall dbusDestination dbusPath dbusInterface "Hello" []
@@ -28,14 +28,14 @@ mainDbus uid = do
 	liftIO $ putStrLn $ show b
 
 	let msg = msgMethodCall "org.freedesktop.Notifications" "/org/freedesktop/Notifications" "org.freedesktop.Notifications" "Notify"
-		[ DbusString "y"
-		, DbusUInt32 1
-		, DbusString "x"
-		, DbusString "this is a string"
-		, DbusString "this is a o----"
-		, DbusArray (SigString) []
-		, DbusArray (SigDict SigString SigVariant) []
-		, DbusInt32 4000
+		[ DBusString "y"
+		, DBusUInt32 1
+		, DBusString "x"
+		, DBusString "this is a string"
+		, DBusString "this is a o----"
+		, DBusArray (SigString) []
+		, DBusArray (SigDict SigString SigVariant) []
+		, DBusInt32 4000
 		]
 
 	liftIO $ putStrLn $ show msg
@@ -43,4 +43,4 @@ mainDbus uid = do
 	msgR <- messageRecv ctx
 	liftIO $ putStrLn $ show msgR
 
-main = getRealUserID >>= mainDbus . fromIntegral
+main = getRealUserID >>= mainDBus . fromIntegral

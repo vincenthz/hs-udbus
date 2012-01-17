@@ -43,7 +43,7 @@ module Network.DBus
 
 	-- * from Type module
 	, ObjectPath
-	, DbusType(..)
+	, DBusType(..)
 	) where
 
 import Numeric (showHex)
@@ -142,17 +142,17 @@ connectSystem = connectUnix "/var/run/dbus/system_bus_socket"
 connectHandle :: Handle -> IO DBusHandle
 connectHandle h = return $ DBusHandle h
 
--- | create a new Dbus context from a ini function to create a dbusHandle.
+-- | create a new DBus context from a ini function to create a dbusHandle.
 --withContext :: IO DBusHandle -> DBusContext a -> IO a
 --withContext ini f = bracket ini close (\h -> evalStateT f (h,1))
 contextNew :: DBusHandle -> IO DBusContext
 contextNew h = liftM (DBusContext h) (newMVar 1)
 
--- | create a new Dbus context on session bus
+-- | create a new DBus context on session bus
 busGetSession :: IO DBusContext 
 busGetSession = connectSession >>= contextNew
 
--- | create a new Dbus context on system bus
+-- | create a new DBus context on system bus
 busGetSystem :: IO DBusContext
 busGetSystem = connectSystem >>= contextNew
 
