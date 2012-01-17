@@ -12,17 +12,18 @@ dbusDestination = "org.freedesktop.DBus"
 dbusPath        = "/org/freedesktop/DBus"
 dbusInterface   = "org.freedesktop.DBus"
 
-mainDbus uid = withSession $ do
-	authenticateUID uid
+mainDbus uid = do
+	ctx <- busGetSession
+	authenticateUID ctx uid
 	let msg = msgMethodCall dbusDestination dbusPath dbusInterface "Hello" []
-	messageSend msg
-	messageRecv
+	messageSend ctx msg
+	messageRecv ctx
 	liftIO $ putStrLn "spurious"
-	messageRecv
+	messageRecv ctx
 
 	let msg = msgMethodCall dbusDestination dbusPath dbusInterface "ListNames" []
-	messageSend msg
-	msg <- messageRecv
+	messageSend ctx msg
+	msg <- messageRecv ctx
 	let b = readBody msg
 	liftIO $ putStrLn $ show b
 
@@ -38,8 +39,8 @@ mainDbus uid = withSession $ do
 		]
 
 	liftIO $ putStrLn $ show msg
-	messageSend msg
-	msgR <- messageRecv
+	messageSend ctx msg
+	msgR <- messageRecv ctx
 	liftIO $ putStrLn $ show msgR
 
 main = getRealUserID >>= mainDbus . fromIntegral

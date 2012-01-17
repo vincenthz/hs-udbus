@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns #-}
 -- |
 -- Module      : Network.DBus
 -- License     : BSD-style
@@ -15,9 +16,8 @@ module Network.DBus
 	, connectSystem
 	, connectHandle
 
-	, withContext
-	, withSession
-	, withSystem
+	, busGetSession
+	, busGetSystem
 
 	, messageSend
 	, messageRecv
@@ -54,6 +54,7 @@ import qualified Data.ByteString.Lazy as L
 
 import Control.Arrow
 import Control.Applicative ((<$>))
+import Control.Concurrent
 import Control.Exception
 import Control.Monad.State
 
@@ -67,38 +68,39 @@ import Network.DBus.Signature
 -- | Represent an open access to dbus. for now only based on system handle.
 newtype DBusHandle = DBusHandle Handle
 
-type DBusContext a = StateT (DBusHandle, Serial) IO a
+data DBusContext = DBusContext
+	{ contextHandle :: DBusHandle
+	, contextSerial :: MVar Serial
+	}
 
-withHandle :: (Handle -> IO a) -> DBusContext a
-withHandle f = do
-	(DBusHandle h) <- fst <$> get
-	liftIO (f h)
+withHandle :: DBusContext -> (Handle -> IO a) -> IO a
+withHandle (contextHandle -> (DBusHandle h)) f = f h
 
-hGet :: Int -> DBusContext ByteString
-hGet i = withHandle (\h -> BC.hGet h i)
+hGet :: DBusContext -> Int -> IO ByteString
+hGet ctx i = withHandle ctx (\h -> BC.hGet h i)
 
-hPut :: ByteString -> DBusContext ()
-hPut b = withHandle (\h -> BC.hPut h b)
+hPut :: DBusContext -> ByteString -> IO ()
+hPut ctx b = withHandle ctx (\h -> BC.hPut h b)
 
-hPuts :: [ByteString] -> DBusContext ()
-hPuts bs = withHandle (\h -> L.hPut h $ L.fromChunks bs)
+hPuts :: DBusContext -> [ByteString] -> IO ()
+hPuts ctx bs = withHandle ctx (\h -> L.hPut h $ L.fromChunks bs)
 
-hGetLine :: DBusContext ()
-hGetLine = withHandle BC.hGetLine >> return ()
+hGetLine :: DBusContext -> IO ()
+hGetLine ctx = withHandle ctx BC.hGetLine >> return ()
 
-authenticateUID :: Int -> DBusContext ()
-authenticateUID uid = authenticate hexencoded_uid
+authenticateUID :: DBusContext -> Int -> IO ()
+authenticateUID ctx uid = authenticate ctx hexencoded_uid
 	where
 		hexencoded_uid = BC.pack $ concatMap (hex2 . ord) $ show uid
 		hex2 a
 			| a < 0x10  = "0" ++ showHex a ""
 			| otherwise = showHex a ""
 
-authenticate :: ByteString -> DBusContext ()
-authenticate auth = do
-	hPut $ BC.concat ["\0AUTH EXTERNAL ", auth, "\r\n"]
-	_ <- hGetLine
-	hPut "BEGIN\r\n"
+authenticate :: DBusContext -> ByteString -> IO ()
+authenticate ctx auth = do
+	hPut ctx $ BC.concat ["\0AUTH EXTERNAL ", auth, "\r\n"]
+	_ <- hGetLine ctx
+	hPut ctx "BEGIN\r\n"
 
 close :: DBusHandle -> IO ()
 close (DBusHandle h) = hClose h
@@ -141,23 +143,24 @@ connectHandle :: Handle -> IO DBusHandle
 connectHandle h = return $ DBusHandle h
 
 -- | create a new Dbus context from a ini function to create a dbusHandle.
-withContext :: IO DBusHandle -> DBusContext a -> IO a
-withContext ini f = bracket ini close (\h -> evalStateT f (h,1))
+--withContext :: IO DBusHandle -> DBusContext a -> IO a
+--withContext ini f = bracket ini close (\h -> evalStateT f (h,1))
+contextNew :: DBusHandle -> IO DBusContext
+contextNew h = liftM (DBusContext h) (newMVar 1)
 
 -- | create a new Dbus context on session bus
-withSession :: DBusContext a -> IO a
-withSession = withContext connectSession
+busGetSession :: IO DBusContext 
+busGetSession = connectSession >>= contextNew
 
 -- | create a new Dbus context on system bus
-withSystem :: DBusContext a -> IO a
-withSystem = withContext connectSystem
+busGetSystem :: IO DBusContext
+busGetSystem = connectSystem >>= contextNew
 
 -- | send one message to the bus
 -- note that the serial of the message sent is allocated here.
-messageSend :: Message -> DBusContext Serial
-messageSend msg = do
-	serial <- snd <$> get
-	modify (\(h,_) -> (h, serial+1))
+messageSend :: DBusContext -> Message -> IO Serial
+messageSend ctx msg = do
+	serial <- modifyMVar (contextSerial ctx) (\v -> return $! (v+1, v))
 	let fieldstr = writeFields (msgFields msg)
 	let fieldlen = BC.length fieldstr
 	let alignfields = alignVal 8 fieldlen - fieldlen
@@ -165,16 +168,16 @@ messageSend msg = do
 		{ headerBodyLength   = BC.length $ msgBody msg
 		, headerFieldsLength = fieldlen
 		, headerSerial       = serial }
-	hPuts [ writeHeader header, fieldstr, BC.replicate alignfields '\0', msgBody msg ]
+	hPuts ctx [ writeHeader header, fieldstr, BC.replicate alignfields '\0', msgBody msg ]
 	return serial
 
 -- | receive one single message from the bus
 -- it is not necessarily the reply from a previous sent message.
-messageRecv :: DBusContext Message
-messageRecv = do
-	hdr    <- readHeader <$> hGet 16
-	fields <- readFields <$> hGet (alignVal 8 $ headerFieldsLength hdr)
-	body   <- hGet (headerBodyLength hdr)
+messageRecv :: DBusContext -> IO Message
+messageRecv ctx = do
+	hdr    <- readHeader <$> hGet ctx 16
+	fields <- readFields <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)
+	body   <- hGet ctx (headerBodyLength hdr)
 	return $ (messageFromHeader hdr) { msgFields = fields, msgBody = body }
 
 alignVal :: Int -> Int -> Int
