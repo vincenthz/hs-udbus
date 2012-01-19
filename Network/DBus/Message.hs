@@ -19,6 +19,7 @@ module Network.DBus.Message
 	, msgMethodReturn
 	, msgError
 	, msgSignal
+	, messageGetReplySerial
 	-- * Parsing and serializing functions
 	, headerFromMessage
 	, messageFromHeader
@@ -98,6 +99,14 @@ fieldVal (FieldDestination _) = 6
 fieldVal (FieldSender      _) = 7
 fieldVal (FieldSignature   _) = 8
 fieldVal (FieldUnixFds     _) = 9
+
+fieldsGetReplySerial :: [Field] -> Maybe Serial
+fieldsGetReplySerial []                     = Nothing
+fieldsGetReplySerial (FieldReplySerial s:_) = Just s
+fieldsGetReplySerial (_:xs)                 = fieldsGetReplySerial xs
+
+messageGetReplySerial :: Message -> Maybe Serial
+messageGetReplySerial = fieldsGetReplySerial . msgFields
 	
 data Message = Message
 	{ msgEndian  :: DbusEndian
