@@ -32,7 +32,8 @@ Library
                    , unix
                    , ghc-prim
   Exposed-modules:   Network.DBus
-  Other-modules:     Network.DBus.IEEE754
+  Other-modules:     Network.DBus.Actions
+                     Network.DBus.IEEE754
                      Network.DBus.Message
                      Network.DBus.Signature
                      Network.DBus.Type
