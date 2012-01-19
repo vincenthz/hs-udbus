@@ -69,7 +69,7 @@ data Header = Header
 	, headerFieldsLength :: !Int
 	} deriving (Show,Eq)
 
-type Body = [DbusType]
+type Body = [DBusType]
 
 type Interface = ByteString
 type Member    = ByteString
