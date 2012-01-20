@@ -4,20 +4,18 @@ import System.Posix.User
 import Network.DBus
 import Network.DBus.Actions
 import Network.DBus.Message
+import Network.DBus.StdMessage
 import Network.DBus.Type
 import Network.DBus.Signature
 import Data.Word
 import Control.Monad.Trans
 
-dbusDestination = "org.freedesktop.DBus"
-dbusPath        = "/org/freedesktop/DBus"
-dbusInterface   = "org.freedesktop.DBus"
 
 mainDBus uid = do
 	ctx <- busGetSession
 	authenticateUID ctx uid
-	let msg = msgMethodCall dbusDestination dbusPath dbusInterface "Hello" []
-	messageSend ctx msg
+
+	messageSend ctx (msgDbusHello)
 	messageRecv ctx
 	liftIO $ putStrLn "spurious"
 	messageRecv ctx
