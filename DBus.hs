@@ -2,6 +2,7 @@
 
 import System.Posix.User
 import Network.DBus
+import Network.DBus.Actions
 import Network.DBus.Message
 import Network.DBus.Type
 import Network.DBus.Signature
