@@ -28,6 +28,7 @@ Library
                    , cereal
                    , bytestring
                    , network
+                   , containers
                    , mtl
                    , unix
                    , ghc-prim
