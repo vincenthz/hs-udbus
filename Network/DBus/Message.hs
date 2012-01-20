@@ -11,15 +11,17 @@ module Network.DBus.Message
 	  MessageType(..)
 	, MessageFlag(..)
 	, Header(..)
-	, Field(..)
+	, Fields(..)
 	, Message(..)
+	, Body
 	, Serial
+	, Member
+	, Interface
 	-- * create new message
 	, msgMethodCall
 	, msgMethodReturn
 	, msgError
 	, msgSignal
-	, messageGetReplySerial
 	-- * Parsing and serializing functions
 	, headerFromMessage
 	, messageFromHeader
@@ -70,43 +72,58 @@ data Header = Header
 	, headerFieldsLength :: !Int
 	} deriving (Show,Eq)
 
+type BodyRaw = (Signature,ByteString)
 type Body = [DBusType]
 
 type Interface = ByteString
 type Member    = ByteString
 type BusName   = ByteString
 type ErrorName = ByteString
+type UnixFD    = Word32
 
-data Field =
-	  FieldPath        ObjectPath
-	| FieldInterface   Interface
-	| FieldMember      Member
-	| FieldErrorName   ErrorName
-	| FieldReplySerial Serial
-	| FieldDestination BusName
-	| FieldSender      ByteString
-	| FieldSignature   Signature
-	| FieldUnixFds     Word32
-	deriving (Show,Eq)
+data Fields = Fields
+	{ fieldsPath        :: Maybe ObjectPath
+	, fieldsInterface   :: Maybe Interface
+	, fieldsMember      :: Maybe Member
+	, fieldsErrorName   :: Maybe ErrorName
+	, fieldsReplySerial :: Maybe Serial
+	, fieldsDestination :: Maybe BusName
+	, fieldsSender      :: Maybe ByteString
+	, fieldsSignature   :: Signature
+	, fieldsUnixFD      :: Maybe UnixFD
+	} deriving (Show,Eq)
 
-fieldVal :: Field -> Int
-fieldVal (FieldPath        _) = 1
-fieldVal (FieldInterface   _) = 2
-fieldVal (FieldMember      _) = 3
-fieldVal (FieldErrorName   _) = 4
-fieldVal (FieldReplySerial _) = 5
-fieldVal (FieldDestination _) = 6
-fieldVal (FieldSender      _) = 7
-fieldVal (FieldSignature   _) = 8
-fieldVal (FieldUnixFds     _) = 9
+fieldsSetPath :: ObjectPath -> Fields -> Fields
+fieldsSetPath v fields = fields { fieldsPath = Just v }
 
-fieldsGetReplySerial :: [Field] -> Maybe Serial
-fieldsGetReplySerial []                     = Nothing
-fieldsGetReplySerial (FieldReplySerial s:_) = Just s
-fieldsGetReplySerial (_:xs)                 = fieldsGetReplySerial xs
+fieldsSetInterface :: Interface -> Fields -> Fields
+fieldsSetInterface v fields = fields { fieldsInterface = Just v }
 
-messageGetReplySerial :: Message -> Maybe Serial
-messageGetReplySerial = fieldsGetReplySerial . msgFields
+fieldsSetMember :: Member -> Fields -> Fields
+fieldsSetMember v fields = fields { fieldsMember = Just v }
+
+fieldsSetErrorName :: ErrorName -> Fields -> Fields
+fieldsSetErrorName v fields = fields { fieldsErrorName = Just v }
+
+fieldsSetReplySerial :: Serial -> Fields -> Fields
+fieldsSetReplySerial v fields = fields { fieldsReplySerial = Just v }
+
+fieldsSetDestination :: BusName -> Fields -> Fields
+fieldsSetDestination v fields = fields { fieldsDestination = Just v }
+
+fieldsSetSender :: ByteString -> Fields -> Fields
+fieldsSetSender v fields = fields { fieldsSender = Just v }
+
+fieldsSetSignature :: Signature -> Fields -> Fields
+fieldsSetSignature v fields = fields { fieldsSignature = v }
+
+fieldsSetUnixFD :: UnixFD -> Fields -> Fields
+fieldsSetUnixFD v fields = fields { fieldsUnixFD = Just v }
+
+emptyFields = Fields Nothing Nothing Nothing Nothing Nothing Nothing Nothing [] Nothing
+
+emptyFieldsWithBody body = emptyFields
+	{ fieldsSignature = if null body then [] else signatureBody body }
 	
 data Message = Message
 	{ msgEndian  :: DbusEndian
@@ -114,8 +131,8 @@ data Message = Message
 	, msgVersion :: !Int
 	, msgFlags   :: !Int
 	, msgSerial  :: !Serial
-	, msgFields  :: [Field]
-	, msgBody    :: ByteString
+	, msgFields  :: Fields
+	, msgBodyRaw :: ByteString
 	} deriving (Show,Eq)
 
 defaultMessage :: Message
@@ -125,8 +142,8 @@ defaultMessage = Message
 	, msgVersion = 1
 	, msgFlags   = 0
 	, msgSerial  = 0
-	, msgFields  = []
-	, msgBody    = B.empty
+	, msgFields  = emptyFields
+	, msgBodyRaw = B.empty
 	}
 
 headerFromMessage :: Message -> Header
@@ -147,54 +164,50 @@ messageFromHeader hdr = Message
 	, msgVersion  = headerVersion hdr
 	, msgFlags    = headerFlags hdr
 	, msgSerial   = headerSerial hdr
-	, msgFields   = []
-	, msgBody     = B.empty
+	, msgFields   = emptyFields
+	, msgBodyRaw  = B.empty
 	}
 
 -- | create a new method call message
 msgMethodCall :: BusName -> ObjectPath -> Interface -> Member -> Body -> Message
 msgMethodCall destination path interface method body = defaultMessage
 	{ msgType   = TypeMethodCall
-	, msgFields =
-		[ FieldPath path
-		, FieldDestination destination
-		, FieldInterface interface
-		, FieldMember method
-		] ++ if null body then [] else [ FieldSignature $ signatureBody body ]
-	, msgBody   = writeBody body
+	, msgFields = fieldsSetPath path
+		$ fieldsSetDestination destination
+		$ fieldsSetInterface interface
+		$ fieldsSetMember method
+		$ emptyFieldsWithBody body
+	, msgBodyRaw = writeBody body
 	}
 
 -- | create a new signal message
 msgSignal :: ObjectPath -> Interface -> Member -> Body -> Message
 msgSignal path interface method body = defaultMessage
 	{ msgType   = TypeSignal
-	, msgFields =
-		[ FieldPath path
-		, FieldInterface interface
-		, FieldMember method
-		] ++ if null body then [] else [ FieldSignature $ signatureBody body ]
-	, msgBody   = writeBody body
+	, msgFields = fieldsSetPath path
+		$ fieldsSetInterface interface
+		$ fieldsSetMember method
+		$ emptyFieldsWithBody body
+	, msgBodyRaw = writeBody body
 	}
 
 -- | create a new method return message
 msgMethodReturn :: Serial -> Body -> Message
 msgMethodReturn replySerial body = defaultMessage
 	{ msgType   = TypeMethodReturn
-	, msgFields =
-		[ FieldReplySerial replySerial
-		] ++ if null body then [] else [ FieldSignature $ signatureBody body ]
-	, msgBody   = writeBody body
+	, msgFields = fieldsSetReplySerial replySerial
+		$ emptyFieldsWithBody body
+	, msgBodyRaw = writeBody body
 	}
 
 -- | create a new error message
 msgError :: ErrorName -> Serial -> Body -> Message
 msgError errorName replySerial body = defaultMessage
 	{ msgType   = TypeError
-	, msgFields =
-		[ FieldErrorName errorName
-		, FieldReplySerial replySerial
-		] ++ if null body then [] else [ FieldSignature $ signatureBody body ]
-	, msgBody   = writeBody body
+	, msgFields = fieldsSetErrorName errorName
+		$ fieldsSetReplySerial replySerial
+		$ emptyFieldsWithBody body
+	, msgBodyRaw = writeBody body
 	}
 
 -- | unserialize a dbus header (16 bytes)
@@ -234,20 +247,20 @@ writeHeader hdr = putWire [putHeader]
 		putw32 $ fromIntegral $ headerFieldsLength hdr
 
 -- | unserialize dbus message fields
-readFields :: ByteString -> [Field]
-readFields b = getWire LE 16 getFields b
+readFields :: ByteString -> Fields
+readFields b = getWire LE 16 (getFields emptyFields) b
 	where
-		getFields :: GetWire [Field]
-		getFields = isWireEmpty >>= \empty -> if empty then return [] else liftM2 (:) getField getFields
+		getFields :: Fields -> GetWire Fields
+		getFields fields = isWireEmpty >>= \empty -> if empty then return fields else (getField fields >>= getFields)
 
-		getField :: GetWire Field
-		getField = do
+		getField :: Fields -> GetWire Fields
+		getField fields = do
 			ty        <- fromIntegral <$> getw8
 			signature <- getVariant
 			when (getSigVal ty /= signature) $ error "field type invalid"
-			t         <- getFieldVal ty
+			setter    <- getFieldVal ty
 			alignRead 8
-			return t
+			return (setter fields)
 
 		getSigVal 1 = SigObjectPath
 		getSigVal 2 = SigString
@@ -260,37 +273,36 @@ readFields b = getWire LE 16 getFields b
 		getSigVal 9 = SigUnixFD
 		getSigVal n = error ("unknown field: " ++ show n)
 
-		getFieldVal :: Int -> GetWire Field
-		getFieldVal 1 = FieldPath        <$> getObjectPath
-		getFieldVal 2 = FieldInterface   <$> getString
-		getFieldVal 3 = FieldMember      <$> getString
-		getFieldVal 4 = FieldErrorName   <$> getString
-		getFieldVal 5 = FieldReplySerial <$> getw32
-		getFieldVal 6 = FieldDestination <$> getString
-		getFieldVal 7 = FieldSender      <$> getString
-		getFieldVal 8 = FieldSignature   <$> getSignature
-		getFieldVal 9 = FieldUnixFds     <$> getw32
+		getFieldVal :: Int -> GetWire (Fields -> Fields)
+		getFieldVal 1 = fieldsSetPath <$> getObjectPath
+		getFieldVal 2 = fieldsSetInterface <$> getString
+		getFieldVal 3 = fieldsSetMember <$> getString
+		getFieldVal 4 = fieldsSetErrorName  <$> getString
+		getFieldVal 5 = fieldsSetReplySerial <$> getw32
+		getFieldVal 6 = fieldsSetDestination <$> getString
+		getFieldVal 7 = fieldsSetSender     <$> getString
+		getFieldVal 8 = fieldsSetSignature  <$> getSignature
+		getFieldVal 9 = fieldsSetUnixFD    <$> getw32
 		getFieldVal n = error ("unknown field: " ++ show n)
 		
 -- | serialize dbus message fields
 -- this doesn't include the necessary padding at the end.
-writeFields :: [Field] -> ByteString
-writeFields fields = putWire (putFields fields)
+writeFields :: Fields -> ByteString
+writeFields fields = putWire . (:[]) $ do
+	putField 1 SigObjectPath putObjectPath $ fieldsPath fields
+	putField 2 SigString putString $ fieldsInterface fields
+	putField 3 SigString putString $ fieldsMember fields
+	putField 4 SigString putString $ fieldsErrorName fields
+	putField 5 SigUInt32 putw32 $ fieldsReplySerial fields
+	putField 6 SigString putString $ fieldsDestination fields
+	putField 7 SigString putString $ fieldsSender fields
+	putField 8 SigSignature putSignature $ if null (fieldsSignature fields) then Nothing else Just $ fieldsSignature fields
+	putField 9 SigUInt32 putw32 $ fieldsUnixFD fields
 	where
-		putFields :: [Field] -> [PutWire]
-		putFields l = map putField l
-		putField f = alignWrite 8 >> putw8 (fromIntegral $ fieldVal f) >> putFieldVal f
-
-		putFieldVal :: Field -> PutWire
-		putFieldVal (FieldPath        s) = putVariant SigObjectPath >> putObjectPath s
-		putFieldVal (FieldInterface   s) = putVariant SigString >> putString s
-		putFieldVal (FieldMember      s) = putVariant SigString >> putString s
-		putFieldVal (FieldErrorName   s) = putVariant SigString >> putString s
-		putFieldVal (FieldReplySerial s) = putVariant SigUInt32 >> putw32 s
-		putFieldVal (FieldDestination s) = putVariant SigString >> putString s
-		putFieldVal (FieldSender      s) = putVariant SigString >> putString s
-		putFieldVal (FieldSignature   s) = putVariant SigSignature >> putSignature s
-		putFieldVal (FieldUnixFds     _) = putVariant SigUInt32 >> putw32 0
+		putField :: Word8 -> SignatureElem -> (a -> PutWire) -> Maybe a -> PutWire
+		putField _ _ _      Nothing  = return ()
+		putField w s putter (Just v) =
+			alignWrite 8 >> putw8 w >> putVariant s >> putter v
 
 -- | serialize body
 writeBody :: Body -> ByteString
@@ -301,15 +313,8 @@ signatureBody body = map sigType body
 
 -- | read message's body with a defined signature
 readBodyWith :: Message -> Signature -> Body
-readBodyWith m sigs = getWire (msgEndian m) 0 (mapM getType sigs) (msgBody m)
+readBodyWith m sigs = getWire (msgEndian m) 0 (mapM getType sigs) (msgBodyRaw m)
 
 -- | read message's body using the signature field as reference
 readBody :: Message -> Body
-readBody m = readBodyWith m (getFieldSig $ msgFields m)
-	where
-		getFieldSig fields = case filter isFieldSignature fields of
-			[FieldSignature s] -> s
-			_                  -> []
-
-		isFieldSignature (FieldSignature _) = True
-		isFieldSignature _                  = False
+readBody m = readBodyWith m (fieldsSignature $ msgFields m)

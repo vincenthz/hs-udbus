@@ -28,7 +28,7 @@ module Network.DBus.Actions
 	-- * from Message module
 	, MessageType(..)
 	, MessageFlag(..)
-	, Field(..)
+	, Fields(..)
 	, Message(..)
 	, Serial
 	, msgMethodCall
@@ -171,10 +171,10 @@ messageSendWithSerial ctx serial msg = do
 	let fieldlen = BC.length fieldstr
 	let alignfields = alignVal 8 fieldlen - fieldlen
 	let header = (headerFromMessage msg)
-		{ headerBodyLength   = BC.length $ msgBody msg
+		{ headerBodyLength   = BC.length $ msgBodyRaw msg
 		, headerFieldsLength = fieldlen
 		, headerSerial       = serial }
-	hPuts ctx [ writeHeader header, fieldstr, BC.replicate alignfields '\0', msgBody msg ]
+	hPuts ctx [ writeHeader header, fieldstr, BC.replicate alignfields '\0', msgBodyRaw msg ]
 
 -- | send one message to the bus
 -- note that the serial of the message sent is allocated here.
@@ -191,7 +191,7 @@ messageRecv ctx = do
 	hdr    <- readHeader <$> hGet ctx 16
 	fields <- readFields <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)
 	body   <- hGet ctx (headerBodyLength hdr)
-	return $ (messageFromHeader hdr) { msgFields = fields, msgBody = body }
+	return $ (messageFromHeader hdr) { msgFields = fields, msgBodyRaw = body }
 
 alignVal :: Int -> Int -> Int
 alignVal n x
