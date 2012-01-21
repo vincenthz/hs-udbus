@@ -7,7 +7,7 @@
 -- Portability : unknown
 --
 module Network.DBus.Wire
-	( DbusEndian(..)
+	( DBusEndian(..)
 	-- * getter
 	, GetWire
 	, getWire
@@ -48,13 +48,13 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Network.DBus.Signature
 
-data DbusEndian = LE | BE deriving (Show,Eq)
-type DbusGet = (DbusEndian, Int) -- Specified endianness and alignment of this context.
+data DBusEndian = LE | BE deriving (Show,Eq)
+type DBusGet = (DBusEndian, Int) -- Specified endianness and alignment of this context.
 
-newtype GetWire a = GetWire { runGW :: ReaderT DbusGet Get a }
-	deriving (Monad, MonadReader DbusGet, Functor)
+newtype GetWire a = GetWire { runGW :: ReaderT DBusGet Get a }
+	deriving (Monad, MonadReader DBusGet, Functor)
 
-getWire :: DbusEndian -> Int -> GetWire a -> ByteString -> a
+getWire :: DBusEndian -> Int -> GetWire a -> ByteString -> a
 getWire endian align f b = runGet (runReaderT (runGW f) (endian,align)) (L.fromChunks [b])
 
 liftGet :: Get a -> GetWire a

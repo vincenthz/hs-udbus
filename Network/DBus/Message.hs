@@ -10,9 +10,11 @@ module Network.DBus.Message
 	(
 	  MessageType(..)
 	, MessageFlag(..)
+	-- * serializing structure for message
 	, Header(..)
 	, Fields(..)
-	, Message(..)
+	-- * lowlevel type representation
+	, DBusMessage(..)
 	, Body
 	, Serial
 	, Member
@@ -62,7 +64,7 @@ data MessageFlag =
 -- | dbus serial number
 type Serial = Word32
 
-data Header = Header
+data DBusHeader = DBusHeader
 	{ headerEndian       :: DbusEndian
 	, headerMessageType  :: !MessageType
 	, headerVersion      :: !Int
@@ -81,7 +83,7 @@ type BusName   = ByteString
 type ErrorName = ByteString
 type UnixFD    = Word32
 
-data Fields = Fields
+data DBusFields = DBusFields
 	{ fieldsPath        :: Maybe ObjectPath
 	, fieldsInterface   :: Maybe Interface
 	, fieldsMember      :: Maybe Member
@@ -91,6 +93,16 @@ data Fields = Fields
 	, fieldsSender      :: Maybe ByteString
 	, fieldsSignature   :: Signature
 	, fieldsUnixFD      :: Maybe UnixFD
+	} deriving (Show,Eq)
+
+data DBusMessage = DBusMessage
+	{ msgEndian  :: DBusEndian
+	, msgType    :: !MessageType
+	, msgVersion :: !Int
+	, msgFlags   :: !Int
+	, msgSerial  :: !Serial
+	, msgFields  :: Fields
+	, msgBodyRaw :: ByteString
 	} deriving (Show,Eq)
 
 fieldsSetPath :: ObjectPath -> Fields -> Fields
@@ -124,19 +136,9 @@ emptyFields = Fields Nothing Nothing Nothing Nothing Nothing Nothing Nothing [] 
 
 emptyFieldsWithBody body = emptyFields
 	{ fieldsSignature = if null body then [] else signatureBody body }
-	
-data Message = Message
-	{ msgEndian  :: DbusEndian
-	, msgType    :: !MessageType
-	, msgVersion :: !Int
-	, msgFlags   :: !Int
-	, msgSerial  :: !Serial
-	, msgFields  :: Fields
-	, msgBodyRaw :: ByteString
-	} deriving (Show,Eq)
 
-defaultMessage :: Message
-defaultMessage = Message
+defaultMessage :: DBusMessage
+defaultMessage = DBusMessage
 	{ msgEndian  = LE
 	, msgType    = TypeInvalid
 	, msgVersion = 1
@@ -146,7 +148,7 @@ defaultMessage = Message
 	, msgBodyRaw = B.empty
 	}
 
-headerFromMessage :: Message -> Header
+headerFromMessage :: DBusMessage -> Header
 headerFromMessage msg = Header
 	{ headerEndian       = msgEndian msg
 	, headerMessageType  = msgType msg
@@ -157,8 +159,8 @@ headerFromMessage msg = Header
 	, headerFieldsLength = 0
 	}
 
-messageFromHeader :: Header -> Message
-messageFromHeader hdr = Message
+messageFromHeader :: Header -> DBusMessage
+messageFromHeader hdr = DBusMessage
 	{ msgEndian   = headerEndian hdr
 	, msgType     = headerMessageType hdr
 	, msgVersion  = headerVersion hdr
@@ -169,19 +171,19 @@ messageFromHeader hdr = Message
 	}
 
 -- | create a new method call message
-msgMethodCall :: BusName -> ObjectPath -> Interface -> Member -> Body -> Message
+msgMethodCall :: BusName -> ObjectPath -> Maybe Interface -> Member -> Body -> DBusMessage
 msgMethodCall destination path interface method body = defaultMessage
 	{ msgType   = TypeMethodCall
 	, msgFields = fieldsSetPath path
 		$ fieldsSetDestination destination
-		$ fieldsSetInterface interface
+		$ maybe id fieldsSetInterface interface
 		$ fieldsSetMember method
 		$ emptyFieldsWithBody body
 	, msgBodyRaw = writeBody body
 	}
 
 -- | create a new signal message
-msgSignal :: ObjectPath -> Interface -> Member -> Body -> Message
+msgSignal :: ObjectPath -> Interface -> Member -> Body -> DBusMessage
 msgSignal path interface method body = defaultMessage
 	{ msgType   = TypeSignal
 	, msgFields = fieldsSetPath path
@@ -192,7 +194,7 @@ msgSignal path interface method body = defaultMessage
 	}
 
 -- | create a new method return message
-msgMethodReturn :: Serial -> Body -> Message
+msgMethodReturn :: Serial -> Body -> DBusMessage
 msgMethodReturn replySerial body = defaultMessage
 	{ msgType   = TypeMethodReturn
 	, msgFields = fieldsSetReplySerial replySerial
@@ -201,7 +203,7 @@ msgMethodReturn replySerial body = defaultMessage
 	}
 
 -- | create a new error message
-msgError :: ErrorName -> Serial -> Body -> Message
+msgError :: ErrorName -> Serial -> Body -> DBusMessage
 msgError errorName replySerial body = defaultMessage
 	{ msgType   = TypeError
 	, msgFields = fieldsSetErrorName errorName
@@ -312,9 +314,9 @@ signatureBody :: Body -> Signature
 signatureBody body = map sigType body
 
 -- | read message's body with a defined signature
-readBodyWith :: Message -> Signature -> Body
+readBodyWith :: DBusMessage -> Signature -> Body
 readBodyWith m sigs = getWire (msgEndian m) 0 (mapM getType sigs) (msgBodyRaw m)
 
 -- | read message's body using the signature field as reference
-readBody :: Message -> Body
+readBody :: DBusMessage -> Body
 readBody m = readBodyWith m (fieldsSignature $ msgFields m)
