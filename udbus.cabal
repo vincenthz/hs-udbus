@@ -27,6 +27,7 @@ Library
                    , binary
                    , cereal
                    , bytestring
+                   , utf8-string
                    , network
                    , containers
                    , mtl
@@ -37,6 +38,7 @@ Library
                      Network.DBus.IEEE754
                      Network.DBus.Message
                      Network.DBus.StdMessage
+                     Network.DBus.Internal
                      Network.DBus.Signature
                      Network.DBus.Type
                      Network.DBus.Wire
