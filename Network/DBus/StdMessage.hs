@@ -15,6 +15,7 @@ module Network.DBus.StdMessage
 	, dbusInterface
 	-- * dbus standard message
 	, msgDBusHello
+	, msgDBusListNames
 	) where
 
 import Network.DBus.Message
@@ -24,3 +25,4 @@ dbusPath        = "/org/freedesktop/DBus"
 dbusInterface   = "org.freedesktop.DBus"
 
 msgDBusHello = msgMethodCall dbusDestination dbusPath dbusInterface "Hello" []
+msgDBusListNames = msgMethodCall dbusDestination dbusPath dbusInterface "ListNames" []
