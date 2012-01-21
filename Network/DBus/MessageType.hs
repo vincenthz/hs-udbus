@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- |
 -- Module      : Network.DBus.MessageType
@@ -16,6 +17,7 @@ module Network.DBus.MessageType
 	, DBusSignal(..)
 	-- serialization functions to and from DBusMessage
 	, toDBusMessage
+	, fromDBusMessage
 	) where
 
 import Network.DBus.Message
@@ -24,6 +26,7 @@ import Network.DBus.Signature
 
 class DBusMessageable a where
 	toDBusMessage   :: a -> DBusMessage
+	fromDBusMessage :: DBusMessage -> Maybe a
 
 data DBusSignal = DBusSignal
 	{ signalPath      :: ObjectPath
@@ -55,18 +58,34 @@ instance DBusMessageable DBusCall where
 		(fieldsSetPath (callPath call) .
 		maybe id fieldsSetInterface (callInterface call) .
 		fieldsSetMember (callMember call))
+	fromDBusMessage msg@(msgFields -> fields) =
+		case (fieldsPath fields, fieldsMember fields) of
+			(Just path, Just member) -> Just $ DBusCall path member (fieldsInterface fields) (readBody msg)
+			_                        -> Nothing
 
 instance DBusMessageable DBusSignal where
 	toDBusMessage signal = messageNew TypeMethodCall (signalBody signal) $
 		(fieldsSetPath (signalPath signal) .
 		fieldsSetInterface (signalInterface signal) .
 		fieldsSetMember (signalMember signal))
+	fromDBusMessage msg@(msgFields -> fields) =
+		case (fieldsPath fields, fieldsMember fields, fieldsInterface fields) of
+			(Just path, Just member, Just intf) -> Just $ DBusSignal path member intf (readBody msg)
+			_                                   -> Nothing
 
 instance DBusMessageable DBusReturn where
-	toDBusMessage return = messageNew TypeMethodCall (returnBody return) $
-		fieldsSetReplySerial (returnReplySerial return)
+	toDBusMessage r = messageNew TypeMethodCall (returnBody r) $
+		fieldsSetReplySerial (returnReplySerial r)
+	fromDBusMessage msg@(msgFields -> fields) =
+		case fieldsReplySerial fields of
+			Just rserial -> Just $ DBusReturn rserial (readBody msg)
+			_            -> Nothing
 
 instance DBusMessageable DBusError where
-	toDBusMessage error = messageNew TypeMethodCall (errorBody error) $
-		(fieldsSetReplySerial (errorReplySerial error)
-		. fieldsSetErrorName (errorName error))
+	toDBusMessage e = messageNew TypeMethodCall (errorBody e) $
+		(fieldsSetReplySerial (errorReplySerial e)
+		. fieldsSetErrorName (errorName e))
+	fromDBusMessage msg@(msgFields -> fields) =
+		case (fieldsReplySerial fields, fieldsErrorName fields) of
+			(Just rserial, Just errname) -> Just $ DBusError rserial errname (readBody msg)
+			_                            -> Nothing
