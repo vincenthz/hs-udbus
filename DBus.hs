@@ -20,8 +20,7 @@ mainDBus uid = do
 	liftIO $ putStrLn "spurious"
 	messageRecv ctx
 
-	let msg = msgMethodCall dbusDestination dbusPath dbusInterface "ListNames" []
-	messageSend ctx msg
+	messageSend ctx msgDBusListNames
 	msg <- messageRecv ctx
 	let b = readBody msg
 	liftIO $ putStrLn $ show b
