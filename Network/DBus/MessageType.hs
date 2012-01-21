@@ -1,5 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 -- |
 -- Module      : Network.DBus.MessageType
 -- License     : BSD-style
@@ -20,6 +21,8 @@ module Network.DBus.MessageType
 	, fromDBusMessage
 	) where
 
+import Control.Exception
+import Data.Data
 import Network.DBus.Message
 import Network.DBus.Type
 import Network.DBus.Signature
@@ -51,7 +54,9 @@ data DBusError = DBusError
 	{ errorReplySerial :: Serial
 	, errorName        :: ErrorName
 	, errorBody        :: Body
-	} deriving (Show,Eq)
+	} deriving (Show,Eq,Data,Typeable)
+
+instance Exception DBusError
 
 instance DBusMessageable DBusCall where
 	toDBusMessage call = messageNew TypeMethodCall (callBody call) $

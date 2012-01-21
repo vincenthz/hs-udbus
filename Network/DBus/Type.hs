@@ -1,4 +1,5 @@
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 -- |
 -- Module      : Network.DBus.Type
 -- License     : BSD-style
@@ -16,6 +17,7 @@ module Network.DBus.Type
 	) where
 
 import Data.Word
+import Data.Data
 import Data.Int
 import Data.ByteString (ByteString)
 import Network.DBus.Wire
@@ -43,7 +45,7 @@ data DBusType =
 	| DBusDict       DBusType DBusType
 	| DBusVariant    DBusType
 	| DBusUnixFD     Word32
-	deriving (Show,Eq)
+	deriving (Show,Eq,Data,Typeable)
 
 -- | return signature element of a dbus type
 sigType :: DBusType -> SignatureElem

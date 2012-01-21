@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 -- |
 -- Module      : Network.DBus.Signature
 -- License     : BSD-style
@@ -14,6 +15,7 @@ module Network.DBus.Signature
 	) where
 
 import Data.Char (chr, ord)
+import Data.Data
 import Data.Serialize.Get
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -39,7 +41,7 @@ data SignatureElem =
 	| SigVariant
 	| SigDict SignatureElem SignatureElem
 	| SigUnixFD
-	deriving (Show,Eq)
+	deriving (Show,Eq,Data,Typeable)
 
 -- | A list of signature element
 type Signature = [SignatureElem]
