@@ -24,5 +24,5 @@ dbusDestination = "org.freedesktop.DBus"
 dbusPath        = "/org/freedesktop/DBus"
 dbusInterface   = "org.freedesktop.DBus"
 
-msgDBusHello = msgMethodCall dbusDestination dbusPath dbusInterface "Hello" []
-msgDBusListNames = msgMethodCall dbusDestination dbusPath dbusInterface "ListNames" []
+msgDBusHello = msgMethodCall dbusDestination dbusPath (Just dbusInterface) "Hello" []
+msgDBusListNames = msgMethodCall dbusDestination dbusPath (Just dbusInterface) "ListNames" []
