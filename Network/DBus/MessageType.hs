@@ -69,7 +69,7 @@ instance DBusMessageable DBusCall where
 			_                        -> Nothing
 
 instance DBusMessageable DBusSignal where
-	toDBusMessage signal = messageNew TypeMethodCall (signalBody signal) $
+	toDBusMessage signal = messageNew TypeSignal (signalBody signal) $
 		(fieldsSetPath (signalPath signal) .
 		fieldsSetInterface (signalInterface signal) .
 		fieldsSetMember (signalMember signal))
@@ -79,7 +79,7 @@ instance DBusMessageable DBusSignal where
 			_                                   -> Nothing
 
 instance DBusMessageable DBusReturn where
-	toDBusMessage r = messageNew TypeMethodCall (returnBody r) $
+	toDBusMessage r = messageNew TypeMethodReturn (returnBody r) $
 		fieldsSetReplySerial (returnReplySerial r)
 	fromDBusMessage msg@(msgFields -> fields) =
 		case fieldsReplySerial fields of
@@ -87,7 +87,7 @@ instance DBusMessageable DBusReturn where
 			_            -> Nothing
 
 instance DBusMessageable DBusError where
-	toDBusMessage e = messageNew TypeMethodCall (errorBody e) $
+	toDBusMessage e = messageNew TypeError (errorBody e) $
 		(fieldsSetReplySerial (errorReplySerial e)
 		. fieldsSetErrorName (errorName e))
 	fromDBusMessage msg@(msgFields -> fields) =
