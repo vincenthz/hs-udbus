@@ -15,7 +15,7 @@ mainDBus uid = do
 	ctx <- busGetSession
 	authenticateUID ctx uid
 
-	messageSend ctx (msgDbusHello)
+	messageSend ctx (msgDBusHello)
 	messageRecv ctx
 	liftIO $ putStrLn "spurious"
 	messageRecv ctx
