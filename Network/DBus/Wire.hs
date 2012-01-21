@@ -47,6 +47,7 @@ import Control.Applicative ((<$>))
 import Control.Monad.Reader
 import Control.Monad.State
 import Network.DBus.Signature
+import Network.DBus.Internal
 
 data DBusEndian = LE | BE deriving (Show,Eq)
 type DBusGet = (DBusEndian, Int) -- Specified endianness and alignment of this context.
@@ -112,8 +113,8 @@ getString = do
 	_       <- getw8
 	return s
 
-getObjectPath :: GetWire ByteString
-getObjectPath = getString
+getObjectPath :: GetWire ObjectPath
+getObjectPath = ObjectPath <$> getString
 
 getMultiple :: Show a => Int -> GetWire a -> GetWire [a]
 getMultiple 0 _ = return []
@@ -191,5 +192,5 @@ putSignature sig = do
 putVariant :: SignatureElem -> PutWire
 putVariant = putSignature . (:[])
 
-putObjectPath :: ByteString -> PutWire
-putObjectPath = putString
+putObjectPath :: ObjectPath -> PutWire
+putObjectPath = putString . unObjectPath

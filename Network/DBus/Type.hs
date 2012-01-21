@@ -20,11 +20,9 @@ import Data.Int
 import Data.ByteString (ByteString)
 import Network.DBus.Wire
 import Network.DBus.Signature
+import Network.DBus.Internal
 import qualified Network.DBus.IEEE754 as IEEE754
 import Control.Applicative ((<$>))
-
--- | DBus ObjectPath
-type ObjectPath = ByteString
 
 -- | DBus Types
 data DBusType =
@@ -99,7 +97,7 @@ putType (DBusInt64 i)      = putw64 $ fromIntegral i
 putType (DBusUInt64 w)     = putw64 w
 putType (DBusDouble d)     = putw64 $ IEEE754.encode d
 putType (DBusString s)     = putString s
-putType (DBusObjectPath s) = putString s
+putType (DBusObjectPath s) = putObjectPath s
 putType (DBusSignature s)  = putSignature s
 putType (DBusUnixFD fd)    = putw32 fd
 putType (DBusStruct _ l)   = alignWrite 8 >> mapM_ putType l
