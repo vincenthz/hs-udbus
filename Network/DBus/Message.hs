@@ -10,20 +10,31 @@ module Network.DBus.Message
 	(
 	  MessageType(..)
 	, MessageFlag(..)
-	-- * serializing structure for message
-	, Header(..)
-	, Fields(..)
-	-- * lowlevel type representation
+	-- * Serializing header for message
+	, DBusHeader(..)
+	-- * Fields type and accessor
+	, DBusFields(..)
+	, fieldsNew
+	, fieldsNewWithBody
+	, fieldsSetPath
+	, fieldsSetInterface
+	, fieldsSetMember
+	, fieldsSetErrorName
+	, fieldsSetReplySerial
+	, fieldsSetDestination
+	, fieldsSetSender
+	, fieldsSetSignature
+	, fieldsSetUnixFD
+	-- * Message type
 	, DBusMessage(..)
+	, BusName
 	, Body
 	, Serial
+	, ErrorName
 	, Member
 	, Interface
-	-- * create new message
-	, msgMethodCall
-	, msgMethodReturn
-	, msgError
-	, msgSignal
+	, messageNew
+	, messageMapFields
 	-- * Parsing and serializing functions
 	, headerFromMessage
 	, messageFromHeader
@@ -65,7 +76,7 @@ data MessageFlag =
 type Serial = Word32
 
 data DBusHeader = DBusHeader
-	{ headerEndian       :: DbusEndian
+	{ headerEndian       :: DBusEndian
 	, headerMessageType  :: !MessageType
 	, headerVersion      :: !Int
 	, headerFlags        :: !Int
@@ -101,55 +112,57 @@ data DBusMessage = DBusMessage
 	, msgVersion :: !Int
 	, msgFlags   :: !Int
 	, msgSerial  :: !Serial
-	, msgFields  :: Fields
+	, msgFields  :: DBusFields
 	, msgBodyRaw :: ByteString
 	} deriving (Show,Eq)
 
-fieldsSetPath :: ObjectPath -> Fields -> Fields
+fieldsSetPath :: ObjectPath -> DBusFields -> DBusFields
 fieldsSetPath v fields = fields { fieldsPath = Just v }
 
-fieldsSetInterface :: Interface -> Fields -> Fields
+fieldsSetInterface :: Interface -> DBusFields -> DBusFields
 fieldsSetInterface v fields = fields { fieldsInterface = Just v }
 
-fieldsSetMember :: Member -> Fields -> Fields
+fieldsSetMember :: Member -> DBusFields -> DBusFields
 fieldsSetMember v fields = fields { fieldsMember = Just v }
 
-fieldsSetErrorName :: ErrorName -> Fields -> Fields
+fieldsSetErrorName :: ErrorName -> DBusFields -> DBusFields
 fieldsSetErrorName v fields = fields { fieldsErrorName = Just v }
 
-fieldsSetReplySerial :: Serial -> Fields -> Fields
+fieldsSetReplySerial :: Serial -> DBusFields -> DBusFields
 fieldsSetReplySerial v fields = fields { fieldsReplySerial = Just v }
 
-fieldsSetDestination :: BusName -> Fields -> Fields
+fieldsSetDestination :: BusName -> DBusFields -> DBusFields
 fieldsSetDestination v fields = fields { fieldsDestination = Just v }
 
-fieldsSetSender :: ByteString -> Fields -> Fields
+fieldsSetSender :: ByteString -> DBusFields -> DBusFields
 fieldsSetSender v fields = fields { fieldsSender = Just v }
 
-fieldsSetSignature :: Signature -> Fields -> Fields
+fieldsSetSignature :: Signature -> DBusFields -> DBusFields
 fieldsSetSignature v fields = fields { fieldsSignature = v }
 
-fieldsSetUnixFD :: UnixFD -> Fields -> Fields
+fieldsSetUnixFD :: UnixFD -> DBusFields -> DBusFields
 fieldsSetUnixFD v fields = fields { fieldsUnixFD = Just v }
 
-emptyFields = Fields Nothing Nothing Nothing Nothing Nothing Nothing Nothing [] Nothing
+fieldsNew = DBusFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing [] Nothing
 
-emptyFieldsWithBody body = emptyFields
-	{ fieldsSignature = if null body then [] else signatureBody body }
+fieldsNewWithBody body = fieldsNew { fieldsSignature = if null body then [] else signatureBody body }
 
-defaultMessage :: DBusMessage
-defaultMessage = DBusMessage
+messageNew :: MessageType -> Body -> (DBusFields -> DBusFields) -> DBusMessage
+messageNew ty body fieldsSetter = DBusMessage
 	{ msgEndian  = LE
-	, msgType    = TypeInvalid
+	, msgType    = ty
 	, msgVersion = 1
 	, msgFlags   = 0
 	, msgSerial  = 0
-	, msgFields  = emptyFields
-	, msgBodyRaw = B.empty
+	, msgFields  = fieldsSetter $ fieldsNewWithBody body
+	, msgBodyRaw = writeBody body
 	}
 
-headerFromMessage :: DBusMessage -> Header
-headerFromMessage msg = Header
+messageMapFields :: (DBusFields -> DBusFields) -> DBusMessage -> DBusMessage
+messageMapFields f msg = msg { msgFields = f $ msgFields msg }
+
+headerFromMessage :: DBusMessage -> DBusHeader
+headerFromMessage msg = DBusHeader
 	{ headerEndian       = msgEndian msg
 	, headerMessageType  = msgType msg
 	, headerVersion      = msgVersion msg
@@ -159,61 +172,19 @@ headerFromMessage msg = Header
 	, headerFieldsLength = 0
 	}
 
-messageFromHeader :: Header -> DBusMessage
+messageFromHeader :: DBusHeader -> DBusMessage
 messageFromHeader hdr = DBusMessage
 	{ msgEndian   = headerEndian hdr
 	, msgType     = headerMessageType hdr
 	, msgVersion  = headerVersion hdr
 	, msgFlags    = headerFlags hdr
 	, msgSerial   = headerSerial hdr
-	, msgFields   = emptyFields
+	, msgFields   = fieldsNew
 	, msgBodyRaw  = B.empty
 	}
 
--- | create a new method call message
-msgMethodCall :: BusName -> ObjectPath -> Maybe Interface -> Member -> Body -> DBusMessage
-msgMethodCall destination path interface method body = defaultMessage
-	{ msgType   = TypeMethodCall
-	, msgFields = fieldsSetPath path
-		$ fieldsSetDestination destination
-		$ maybe id fieldsSetInterface interface
-		$ fieldsSetMember method
-		$ emptyFieldsWithBody body
-	, msgBodyRaw = writeBody body
-	}
-
--- | create a new signal message
-msgSignal :: ObjectPath -> Interface -> Member -> Body -> DBusMessage
-msgSignal path interface method body = defaultMessage
-	{ msgType   = TypeSignal
-	, msgFields = fieldsSetPath path
-		$ fieldsSetInterface interface
-		$ fieldsSetMember method
-		$ emptyFieldsWithBody body
-	, msgBodyRaw = writeBody body
-	}
-
--- | create a new method return message
-msgMethodReturn :: Serial -> Body -> DBusMessage
-msgMethodReturn replySerial body = defaultMessage
-	{ msgType   = TypeMethodReturn
-	, msgFields = fieldsSetReplySerial replySerial
-		$ emptyFieldsWithBody body
-	, msgBodyRaw = writeBody body
-	}
-
--- | create a new error message
-msgError :: ErrorName -> Serial -> Body -> DBusMessage
-msgError errorName replySerial body = defaultMessage
-	{ msgType   = TypeError
-	, msgFields = fieldsSetErrorName errorName
-		$ fieldsSetReplySerial replySerial
-		$ emptyFieldsWithBody body
-	, msgBodyRaw = writeBody body
-	}
-
 -- | unserialize a dbus header (16 bytes)
-readHeader :: ByteString -> Header
+readHeader :: ByteString -> DBusHeader
 readHeader b = getWire LE 0 getHeader b
 	where getHeader = do
 		e      <- getw8
@@ -226,7 +197,7 @@ readHeader b = getWire LE 0 getHeader b
 		serial <- swapf                 <$> getw32
 		flen   <- fromIntegral . swapf  <$> getw32
 
-		return $! Header
+		return $! DBusHeader
 			{ headerEndian       = if fromIntegral e /= fromEnum 'l' then BE else LE
 			, headerMessageType  = mt
 			, headerVersion      = ver
@@ -237,7 +208,7 @@ readHeader b = getWire LE 0 getHeader b
 			}
 
 -- | serialize a dbus header
-writeHeader :: Header -> ByteString
+writeHeader :: DBusHeader -> ByteString
 writeHeader hdr = putWire [putHeader]
 	where putHeader = do
 		putw8 $ fromIntegral $ fromEnum $ if headerEndian hdr == BE then 'b' else 'l'
@@ -249,13 +220,13 @@ writeHeader hdr = putWire [putHeader]
 		putw32 $ fromIntegral $ headerFieldsLength hdr
 
 -- | unserialize dbus message fields
-readFields :: ByteString -> Fields
-readFields b = getWire LE 16 (getFields emptyFields) b
+readFields :: ByteString -> DBusFields
+readFields b = getWire LE 16 (getFields fieldsNew) b
 	where
-		getFields :: Fields -> GetWire Fields
+		getFields :: DBusFields -> GetWire DBusFields
 		getFields fields = isWireEmpty >>= \empty -> if empty then return fields else (getField fields >>= getFields)
 
-		getField :: Fields -> GetWire Fields
+		getField :: DBusFields -> GetWire DBusFields
 		getField fields = do
 			ty        <- fromIntegral <$> getw8
 			signature <- getVariant
@@ -275,7 +246,7 @@ readFields b = getWire LE 16 (getFields emptyFields) b
 		getSigVal 9 = SigUnixFD
 		getSigVal n = error ("unknown field: " ++ show n)
 
-		getFieldVal :: Int -> GetWire (Fields -> Fields)
+		getFieldVal :: Int -> GetWire (DBusFields -> DBusFields)
 		getFieldVal 1 = fieldsSetPath <$> getObjectPath
 		getFieldVal 2 = fieldsSetInterface <$> getString
 		getFieldVal 3 = fieldsSetMember <$> getString
@@ -289,7 +260,7 @@ readFields b = getWire LE 16 (getFields emptyFields) b
 		
 -- | serialize dbus message fields
 -- this doesn't include the necessary padding at the end.
-writeFields :: Fields -> ByteString
+writeFields :: DBusFields -> ByteString
 writeFields fields = putWire . (:[]) $ do
 	putField 1 SigObjectPath putObjectPath $ fieldsPath fields
 	putField 2 SigString putString $ fieldsInterface fields

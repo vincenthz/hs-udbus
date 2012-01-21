@@ -28,13 +28,9 @@ module Network.DBus.Actions
 	-- * from Message module
 	, MessageType(..)
 	, MessageFlag(..)
-	, Fields(..)
-	, Message(..)
+	, DBusFields(..)
+	, DBusMessage(..)
 	, Serial
-	, msgMethodCall
-	, msgMethodReturn
-	, msgError
-	, msgSignal
 
 	-- * read a message body
 	, readBody
@@ -165,7 +161,7 @@ busGetNextSerial ctx =
 	modifyMVar (contextSerial ctx) (\v -> return $! (v+1, v))
 
 -- | send one message to the bus with a predefined serial number.
-messageSendWithSerial :: DBusContext -> Serial -> Message -> IO ()
+messageSendWithSerial :: DBusContext -> Serial -> DBusMessage -> IO ()
 messageSendWithSerial ctx serial msg = do
 	let fieldstr = writeFields (msgFields msg)
 	let fieldlen = BC.length fieldstr
@@ -178,7 +174,7 @@ messageSendWithSerial ctx serial msg = do
 
 -- | send one message to the bus
 -- note that the serial of the message sent is allocated here.
-messageSend :: DBusContext -> Message -> IO Serial
+messageSend :: DBusContext -> DBusMessage -> IO Serial
 messageSend ctx msg = do
 	serial <- busGetNextSerial ctx
 	messageSendWithSerial ctx serial msg
@@ -186,7 +182,7 @@ messageSend ctx msg = do
 
 -- | receive one single message from the bus
 -- it is not necessarily the reply from a previous sent message.
-messageRecv :: DBusContext -> IO Message
+messageRecv :: DBusContext -> IO DBusMessage
 messageRecv ctx = do
 	hdr    <- readHeader <$> hGet ctx 16
 	fields <- readFields <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)

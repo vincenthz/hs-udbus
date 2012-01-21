@@ -19,10 +19,12 @@ module Network.DBus.StdMessage
 	) where
 
 import Network.DBus.Message
+import Network.DBus.MessageType
 
+dbusDestination :: BusName
 dbusDestination = "org.freedesktop.DBus"
 dbusPath        = "/org/freedesktop/DBus"
 dbusInterface   = "org.freedesktop.DBus"
 
-msgDBusHello = msgMethodCall dbusDestination dbusPath (Just dbusInterface) "Hello" []
-msgDBusListNames = msgMethodCall dbusDestination dbusPath (Just dbusInterface) "ListNames" []
+msgDBusHello = DBusCall dbusPath "Hello" (Just dbusInterface) []
+msgDBusListNames = DBusCall dbusPath "ListNames" (Just dbusInterface) []
