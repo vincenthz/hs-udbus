@@ -20,7 +20,7 @@ import Network.DBus.Actions
 import Network.DBus.Message
 import Network.DBus.MessageType
 import Network.DBus.StdMessage
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Concurrent.Chan
 import Control.Exception
@@ -49,6 +49,7 @@ data DBusConnection = DBusConnection
 	, connectionPaths           :: MVar (M.Map ObjectPath CallTable)
 	, connectionSignals         :: DBusSignal -> IO ()
 	, connectionDefaultCallback :: DBusMessage -> IO ()
+	, connectionMainLoop        :: MVar ThreadId
 	}
 
 sendLock con f = f
@@ -98,6 +99,7 @@ runMainLoop = runMainLoopCatchall (\_ -> return ())
 runMainLoopCatchall catchAll context = do
 	callbacks <- newMVar M.empty
 	paths     <- newMVar M.empty
+	mainloopPid <- newEmptyMVar
 
 	let con = DBusConnection
 		{ connectionContext         = context
@@ -105,8 +107,11 @@ runMainLoopCatchall catchAll context = do
 		, connectionPaths           = paths
 		, connectionSignals         = \_ -> return ()
 		, connectionDefaultCallback = catchAll
+		, connectionMainLoop        = mainloopPid
 		}
-	_ <- forkIO (dispatcher con)
+	pid <- forkIO (dispatcher con)
+	putMVar mainloopPid pid
+
 	call con dbusDestination msgDBusHello
 	return con
 
