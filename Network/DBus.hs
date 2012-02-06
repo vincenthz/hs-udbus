@@ -12,6 +12,12 @@ module Network.DBus
 	-- * handle connections to DBus
 	  establish
 	, DBusConnection
+	-- * Types
+	, DBusCall(..)
+	, DBusReturn(..)
+	, DBusError(..)
+	, DBusSignal(..)
+	, DBusType(..)
 	-- * main loop creation
 	, runMainLoop
 	, runMainLoopCatchall
