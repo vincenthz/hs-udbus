@@ -34,8 +34,8 @@ Library
                    , unix
                    , ghc-prim
   Exposed-modules:   Network.DBus
-  Other-modules:     Network.DBus.Actions
-                     Network.DBus.IEEE754
+                     Network.DBus.Actions
+  Other-modules:     Network.DBus.IEEE754
                      Network.DBus.Message
                      Network.DBus.MessageType
                      Network.DBus.StdMessage
