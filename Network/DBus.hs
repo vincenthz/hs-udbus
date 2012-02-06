@@ -8,12 +8,26 @@
 -- Portability : unknown
 --
 module Network.DBus
-	( runMainLoop
+	(
+	-- * handle connections to DBus
+	  establish
+	, DBusConnection
+	-- * main loop creation
+	, runMainLoop
 	, runMainLoopCatchall
+	-- * interact with the connection
 	, call
+	, reply
 	, calltableFromList
 	, registerPath
 	, unregisterPath
+	-- * create a new context on system or session bus
+	, busGetSystem
+	, busGetSession
+	-- * authenticate methods available
+	, authenticate
+	, authenticateUID
+	, authenticateWithRealUID
 	) where
 
 import Network.DBus.Actions
