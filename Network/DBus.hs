@@ -22,7 +22,6 @@ import Network.DBus.MessageType
 import Network.DBus.StdMessage
 import Control.Concurrent (forkIO, ThreadId)
 import Control.Concurrent.MVar
-import Control.Concurrent.Chan
 import Control.Exception
 import Control.Monad
 import qualified Data.Map as M
