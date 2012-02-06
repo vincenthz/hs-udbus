@@ -40,6 +40,8 @@ calltableFromList = foldl f M.empty where
 	appendOrCreate intf callback Nothing  = Just [(intf,callback)]
 	appendOrCreate intf callback (Just l) = Just ((intf,callback) : l)
 
+-- | opaque type representing a connection to DBus and a receiving dispatcher thread.
+-- maintain table to route message between handlers.
 data DBusConnection = DBusConnection
 	{ connectionContext         :: DBusContext
 	, connectionCallbacks       :: MVar (M.Map Serial MessageVar)
