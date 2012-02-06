@@ -112,7 +112,8 @@ call con destination c = do
 				Just ret -> return ret
 		_                -> throwIO invalidException
 	where
-		invalidException = DBusError 0 "org.freedesktop.dbus.invalidpacket" [DBusString "invalid packet received. missing fields"]
+		invalidException = DBusError 0 "org.freedesktop.dbus.invalidpacket"
+			[DBusString "invalid packet received. missing fields"]
 		errorFromDBusMessage :: DBusMessage -> Maybe DBusError
 		errorFromDBusMessage = fromDBusMessage
 
