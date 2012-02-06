@@ -25,7 +25,6 @@ import Control.Exception
 import Data.Data
 import Network.DBus.Message
 import Network.DBus.Type
-import Network.DBus.Signature
 
 class DBusMessageable a where
 	toDBusMessage   :: a -> DBusMessage
