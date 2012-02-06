@@ -42,7 +42,7 @@ Library
                      Network.DBus.Signature
                      Network.DBus.Type
                      Network.DBus.Wire
-  ghc-options:       -Wall
+  ghc-options:       -Wall -fno-warn-missing-signatures
 
 Executable           dbus
   Main-is:           DBus.hs
