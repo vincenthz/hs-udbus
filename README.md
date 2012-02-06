@@ -2,18 +2,17 @@ hs-udbus
 ========
 
 The udbus haskell package provides a BSD implementation of the DBus protocol in
-pure Haskell, giving access to a simple lowlevel interface. The interfaces are
-coherent and basic, sacrificing some ease of use (in using more appropriate
-haskell types for dbus array for example) in favor of being able to write generated
-code easily.
+pure Haskell, giving access to a simple lowlevel (Network.DBus.Actions) interface
+and a simple high level interface with a simple mainloop dispatcher (Network.DBus)
+
+The interfaces are coherent and basic, sacrificing some ease of use (in using
+more appropriate haskell types for dbus array for example) in favor of being
+able to write generated code easily.
 
 The code doesn't check if the object values (objectpath, interface, etc)
 are appropriates on sending, nor on receiving. The dbus daemon should have
 prevented invalid values to be received, and for sending, the user need to take
 extra care of the values sent.
-
-Dbus startup negotiation need to be done properly by the user, that includes
-sending the hello method call at startup (see Example).
 
 TODO & Caveats
 --------------
@@ -29,6 +28,7 @@ true for every architecture supported by GHC.
 
 Stability
 ---------
+
 While the low level interfaces should remains the same, it's not unexpected that
 some high level interface would be grafted on top of the actual interfaces.
 
