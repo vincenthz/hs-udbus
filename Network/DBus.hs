@@ -55,6 +55,17 @@ data DBusConnection = DBusConnection
 sendLock con f = withMVar (connectionSendLock con) $ \() -> f
 --recvLock con f = f
 
+-- | Establish a new connection to dbus, using the two functions to
+-- first establish a new context, and second to authenticate to the bus.
+-- this will automatically create a mainloop thread.
+establish :: IO DBusContext         -- ^ function to create a new dbus context (busGetSystem or busGetSession)
+          -> (DBusContext -> IO ()) -- ^ function to authenticate to dbus
+          -> IO DBusConnection
+establish createContext auth = do
+	ctx <- createContext
+	auth ctx
+	runMainLoop ctx
+
 call :: DBusConnection -> BusName -> DBusCall -> IO DBusReturn
 call con destination c = do
 	let msg = messageMapFields (fieldsSetDestination destination) $ toDBusMessage c
