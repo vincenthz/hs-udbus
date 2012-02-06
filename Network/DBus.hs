@@ -112,7 +112,7 @@ runMainLoopCatchall catchAll context = do
 	pid <- forkIO (dispatcher con)
 	putMVar mainloopPid pid
 
-	call con dbusDestination msgDBusHello
+	_ <- call con dbusDestination msgDBusHello
 	return con
 
 dispatcher con = forever loop where
