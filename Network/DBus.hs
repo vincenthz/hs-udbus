@@ -11,6 +11,7 @@ module Network.DBus
 	(
 	-- * handle connections to DBus
 	  establish
+	, establishWithCatchall
 	, DBusConnection
 	-- * Types
 	, DBusCall(..)
@@ -85,6 +86,11 @@ establish createContext auth = do
 	ctx <- createContext
 	auth ctx
 	runMainLoop ctx
+
+establishWithCatchall catchall createContext auth = do
+	ctx <- createContext
+	auth ctx
+	runMainLoopCatchall catchall ctx
 
 call :: DBusConnection -> BusName -> DBusCall -> IO DBusReturn
 call con destination c = do
