@@ -16,10 +16,12 @@ module Network.DBus.StdMessage
 	-- * dbus standard message
 	, msgDBusHello
 	, msgDBusListNames
+	, msgDBusAddMatch
 	) where
 
 import Network.DBus.Message
 import Network.DBus.MessageType
+import Network.DBus.Type
 
 dbusDestination :: BusName
 dbusDestination = "org.freedesktop.DBus"
@@ -28,3 +30,5 @@ dbusInterface   = "org.freedesktop.DBus"
 
 msgDBusHello = DBusCall dbusPath "Hello" (Just dbusInterface) []
 msgDBusListNames = DBusCall dbusPath "ListNames" (Just dbusInterface) []
+
+msgDBusAddMatch matchingRule = DBusCall dbusPath "AddMatch" (Just dbusInterface) [ DBusString matchingRule ]
