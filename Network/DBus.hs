@@ -19,6 +19,11 @@ module Network.DBus
 	, DBusError(..)
 	, DBusSignal(..)
 	, DBusType(..)
+	, DBusMatchRules(..)
+	, defaultDBusMatchRules
+	, MessageType(..)
+	-- * standard way to interact with dbus
+	, addMatch
 	-- * main loop creation
 	, runMainLoop
 	, runMainLoopCatchall
@@ -40,13 +45,18 @@ module Network.DBus
 import Network.DBus.Actions
 import Network.DBus.Message
 import Network.DBus.MessageType
+import Network.DBus.Type
 import Network.DBus.StdMessage
+import Network.DBus.Internal
 import Control.Concurrent (forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
 import qualified Data.Map as M
+import Data.List (intersperse)
 import System.Posix.User (getRealUserID)
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as BC
 
 type MessageVar  = MVar DBusMessage
 
@@ -72,6 +82,17 @@ data DBusConnection = DBusConnection
 	, connectionDefaultCallback :: DBusMessage -> IO ()
 	, connectionMainLoop        :: MVar ThreadId
 	}
+
+data DBusMatchRules = DBusMatchRules
+	{ matchType        :: Maybe MessageType
+	, matchSender      :: Maybe BusName
+	, matchInterface   :: Maybe Interface
+	, matchMember      :: Maybe B.ByteString
+	, matchPath        :: Maybe ObjectPath
+	, matchDestination :: Maybe BusName
+	}
+
+defaultDBusMatchRules = DBusMatchRules Nothing Nothing Nothing Nothing Nothing Nothing
 
 sendLock con f = withMVar (connectionSendLock con) $ \() -> f
 --recvLock con f = f
@@ -116,6 +137,20 @@ call con destination c = do
 			[DBusString "invalid packet received. missing fields"]
 		errorFromDBusMessage :: DBusMessage -> Maybe DBusError
 		errorFromDBusMessage = fromDBusMessage
+
+addMatch :: DBusConnection -> DBusMatchRules -> IO ()
+addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> return ()
+	where
+		serialized = B.concat $ intersperse "," $ filter (not . B.null)
+			[ mm "type"        (BC.pack . show) $ matchType mr
+			, mm "sender"      id $ matchSender mr
+			, mm "interface"   id $ matchInterface mr
+			, mm "member"      id $ matchMember mr
+			, mm "path"        unObjectPath $ matchPath mr
+			, mm "destination" id $ matchDestination mr
+			]
+		mm key f = maybe B.empty (surroundQuote key . f)
+		surroundQuote key v = B.concat [ key, "='",  v, "'" ]
 
 reply con rep = do
 	let msg = toDBusMessage rep
