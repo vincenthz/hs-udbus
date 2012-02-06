@@ -87,6 +87,7 @@ hPuts ctx bs = withHandle ctx (\h -> L.hPut h $ L.fromChunks bs)
 hGetLine :: DBusContext -> IO ()
 hGetLine ctx = withHandle ctx BC.hGetLine >> return ()
 
+-- | authenticate to DBus using a UID.
 authenticateUID :: DBusContext -> Int -> IO ()
 authenticateUID ctx uid = authenticate ctx hexencoded_uid
 	where
@@ -95,6 +96,7 @@ authenticateUID ctx uid = authenticate ctx hexencoded_uid
 			| a < 0x10  = "0" ++ showHex a ""
 			| otherwise = showHex a ""
 
+-- | authenticate to DBus using a raw bytestring.
 authenticate :: DBusContext -> ByteString -> IO ()
 authenticate ctx auth = do
 	hPut ctx $ BC.concat ["\0AUTH EXTERNAL ", auth, "\r\n"]
