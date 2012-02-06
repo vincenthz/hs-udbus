@@ -64,7 +64,14 @@ data MessageType =
 	| TypeMethodReturn
 	| TypeError
 	| TypeSignal
-	deriving (Show,Eq,Enum)
+	deriving (Eq,Enum)
+
+instance Show MessageType where
+	show TypeInvalid      = "invalid"
+	show TypeMethodCall   = "method_call"
+	show TypeMethodReturn = "method_return"
+	show TypeError        = "error"
+	show TypeSignal       = "signal"
 
 -- | dbus message flags
 data MessageFlag =
