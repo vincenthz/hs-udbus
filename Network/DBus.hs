@@ -45,6 +45,7 @@ calltableFromList = foldl f M.empty where
 -- maintain table to route message between handlers.
 data DBusConnection = DBusConnection
 	{ connectionContext         :: DBusContext
+	, connectionSendLock        :: MVar ()
 	, connectionCallbacks       :: MVar (M.Map Serial MessageVar)
 	, connectionPaths           :: MVar (M.Map ObjectPath CallTable)
 	, connectionSignals         :: DBusSignal -> IO ()
@@ -52,7 +53,7 @@ data DBusConnection = DBusConnection
 	, connectionMainLoop        :: MVar ThreadId
 	}
 
-sendLock con f = f
+sendLock con f = withMVar (connectionSendLock con) $ \() -> f
 --recvLock con f = f
 
 call :: DBusConnection -> BusName -> DBusCall -> IO DBusReturn
@@ -100,6 +101,7 @@ runMainLoopCatchall catchAll context = do
 	callbacks <- newMVar M.empty
 	paths     <- newMVar M.empty
 	mainloopPid <- newEmptyMVar
+	sendLockVar <- newMVar ()
 
 	let con = DBusConnection
 		{ connectionContext         = context
@@ -108,6 +110,7 @@ runMainLoopCatchall catchAll context = do
 		, connectionSignals         = \_ -> return ()
 		, connectionDefaultCallback = catchAll
 		, connectionMainLoop        = mainloopPid
+		, connectionSendLock        = sendLockVar
 		}
 	pid <- forkIO (dispatcher con)
 	putMVar mainloopPid pid
