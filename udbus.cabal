@@ -37,6 +37,7 @@ Library
   Other-modules:     Network.DBus.Actions
                      Network.DBus.IEEE754
                      Network.DBus.Message
+                     Network.DBus.MessageType
                      Network.DBus.StdMessage
                      Network.DBus.Internal
                      Network.DBus.Signature
