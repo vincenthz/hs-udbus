@@ -26,6 +26,7 @@ import Control.Concurrent.Chan
 import Control.Exception
 import Control.Monad
 import qualified Data.Map as M
+import System.Posix.User (getRealUserID)
 
 type MessageVar  = MVar DBusMessage
 
@@ -154,3 +155,7 @@ dispatcher con = forever loop where
 	safeHead (x:_) = Just x
 
 	notifyUser = connectionDefaultCallback con
+
+-- | use the real user UID to authenticate to DBus.
+authenticateWithRealUID :: DBusContext -> IO ()
+authenticateWithRealUID ctx = getRealUserID >>= authenticateUID ctx . fromIntegral
