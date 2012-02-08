@@ -16,9 +16,9 @@ import Data.String
 import qualified Data.ByteString.UTF8 as UTF8
 import Data.ByteString (ByteString)
 
-newtype ObjectPath = ObjectPath { unObjectPath :: ByteString }
+newtype ObjectPath = ObjectPath { unObjectPath :: String }
 	deriving (Eq,Ord,Data,Typeable)
 instance Show ObjectPath where
-	show = show . UTF8.toString . unObjectPath
+	show = show . unObjectPath
 instance IsString ObjectPath where
-	fromString = ObjectPath . UTF8.fromString
+	fromString = ObjectPath

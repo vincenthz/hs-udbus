@@ -95,10 +95,10 @@ data DBusHeader = DBusHeader
 type BodyRaw = (Signature,ByteString)
 type Body = [DBusType]
 
-type Interface = ByteString
-type Member    = ByteString
-type BusName   = ByteString
-type ErrorName = ByteString
+type Interface = String
+type Member    = String
+type BusName   = String
+type ErrorName = String
 type UnixFD    = Word32
 
 data DBusFields = DBusFields
@@ -108,7 +108,7 @@ data DBusFields = DBusFields
 	, fieldsErrorName   :: Maybe ErrorName
 	, fieldsReplySerial :: Maybe Serial
 	, fieldsDestination :: Maybe BusName
-	, fieldsSender      :: Maybe ByteString
+	, fieldsSender      :: Maybe BusName
 	, fieldsSignature   :: Signature
 	, fieldsUnixFD      :: Maybe UnixFD
 	} deriving (Show,Eq)
@@ -141,7 +141,7 @@ fieldsSetReplySerial v fields = fields { fieldsReplySerial = Just v }
 fieldsSetDestination :: BusName -> DBusFields -> DBusFields
 fieldsSetDestination v fields = fields { fieldsDestination = Just v }
 
-fieldsSetSender :: ByteString -> DBusFields -> DBusFields
+fieldsSetSender :: BusName -> DBusFields -> DBusFields
 fieldsSetSender v fields = fields { fieldsSender = Just v }
 
 fieldsSetSignature :: Signature -> DBusFields -> DBusFields

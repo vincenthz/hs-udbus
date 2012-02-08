@@ -53,7 +53,8 @@ import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
 import qualified Data.Map as M
-import Data.List (intersperse)
+import Data.List (intercalate)
+import Data.String
 import System.Posix.User (getRealUserID)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
@@ -87,7 +88,7 @@ data DBusMatchRules = DBusMatchRules
 	{ matchType        :: Maybe MessageType
 	, matchSender      :: Maybe BusName
 	, matchInterface   :: Maybe Interface
-	, matchMember      :: Maybe B.ByteString
+	, matchMember      :: Maybe Member
 	, matchPath        :: Maybe ObjectPath
 	, matchDestination :: Maybe BusName
 	}
@@ -141,16 +142,16 @@ call con destination c = do
 addMatch :: DBusConnection -> DBusMatchRules -> IO ()
 addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> return ()
 	where
-		serialized = B.concat $ intersperse "," $ filter (not . B.null)
-			[ mm "type"        (BC.pack . show) $ matchType mr
+		serialized = intercalate "," $ filter (not . null)
+			[ mm "type"        show $ matchType mr
 			, mm "sender"      id $ matchSender mr
 			, mm "interface"   id $ matchInterface mr
 			, mm "member"      id $ matchMember mr
 			, mm "path"        unObjectPath $ matchPath mr
 			, mm "destination" id $ matchDestination mr
 			]
-		mm key f = maybe B.empty (surroundQuote key . f)
-		surroundQuote key v = B.concat [ key, "='",  v, "'" ]
+		mm key f = maybe "" (surroundQuote key . f)
+		surroundQuote key v = concat [ key, "='",  v, "'" ]
 
 reply con rep = do
 	let msg = toDBusMessage rep

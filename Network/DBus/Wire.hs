@@ -41,6 +41,7 @@ import Data.Bits
 import Data.Binary.Get
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.ByteString.Lazy as L
 
 import Control.Applicative ((<$>))
@@ -106,12 +107,12 @@ getSignature = do
 getVariant :: GetWire SignatureElem
 getVariant = getSignatureOne
 
-getString :: GetWire ByteString
+getString :: GetWire String
 getString = do
 	nbBytes <- fromIntegral <$> getw32
 	s       <- liftGet $ getByteString nbBytes
 	_       <- getw8
-	return s
+	return $ UTF8.toString s
 
 getObjectPath :: GetWire ObjectPath
 getObjectPath = ObjectPath <$> getString
@@ -176,11 +177,12 @@ putw64 w = alignWrite 8 >> putBytes (B.pack le)
 		p7 = fromIntegral $ w `shiftR` 8
 		p8 = fromIntegral w
 
-putString :: ByteString -> PutWire
-putString b = do
+putString :: String -> PutWire
+putString s = do
 	putw32 (fromIntegral $ B.length b)
 	putBytes b
 	putw8 0
+	where b = UTF8.fromString s
 
 putSignature :: Signature -> PutWire
 putSignature sig = do

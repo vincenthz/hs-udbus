@@ -37,7 +37,7 @@ data DBusType =
 	| DBusInt64      Int64
 	| DBusUInt64     Word64
 	| DBusDouble     Double
-	| DBusString     ByteString
+	| DBusString     String
 	| DBusObjectPath ObjectPath
 	| DBusSignature  Signature
 	| DBusArray      SignatureElem [DBusType]
