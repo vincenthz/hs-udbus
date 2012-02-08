@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 -- |
 -- Module      : Network.DBus
@@ -45,7 +44,6 @@ module Network.DBus
 import Network.DBus.Actions
 import Network.DBus.Message
 import Network.DBus.MessageType
-import Network.DBus.Type
 import Network.DBus.StdMessage
 import Network.DBus.Internal
 import Control.Concurrent (forkIO, ThreadId)
@@ -54,10 +52,7 @@ import Control.Exception
 import Control.Monad
 import qualified Data.Map as M
 import Data.List (intercalate)
-import Data.String
 import System.Posix.User (getRealUserID)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as BC
 
 type MessageVar  = MVar DBusMessage
 
