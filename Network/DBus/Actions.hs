@@ -8,14 +8,15 @@
 -- Portability : unknown
 --
 module Network.DBus.Actions
-	( DBusHandle
-	, DBusContext
+	( DBusContext
+	, DBusTransport(..)
 	, authenticate
 	, authenticateUID
 
 	, connectSession
 	, connectSystem
-	, connectHandle
+	, contextNew
+	, contextNewWith
 
 	, busGetSession
 	, busGetSystem
@@ -64,28 +65,41 @@ import Network.DBus.Message
 import Network.DBus.Type
 import Network.DBus.Signature
 
--- | Represent an open access to dbus. for now only based on system handle.
-newtype DBusHandle = DBusHandle Handle
-
-data DBusContext = DBusContext
-	{ contextHandle :: DBusHandle
-	, contextSerial :: MVar Serial
+data DBusTransport = DBusTransport
+	{ transportGet   :: Int -> IO ByteString
+	, transportPut   :: ByteString -> IO ()
+	, transportClose :: IO ()
 	}
 
-withHandle :: DBusContext -> (Handle -> IO a) -> IO a
-withHandle (contextHandle -> (DBusHandle h)) f = f h
+data DBusContext = DBusContext
+	{ contextTransport :: DBusTransport
+	, contextSerial    :: MVar Serial
+	}
+
+withTransport :: DBusContext -> (DBusTransport -> IO a) -> IO a
+withTransport ctx f = f $ contextTransport ctx
+
+transportHandle :: Handle -> DBusTransport
+transportHandle h = DBusTransport
+	{ transportGet   = BC.hGet h
+	, transportPut   = BC.hPut h
+	, transportClose = hClose h
+	}
 
 hGet :: DBusContext -> Int -> IO ByteString
-hGet ctx i = withHandle ctx (\h -> BC.hGet h i)
+hGet ctx i = withTransport ctx (\t -> transportGet t $ i)
 
 hPut :: DBusContext -> ByteString -> IO ()
-hPut ctx b = withHandle ctx (\h -> BC.hPut h b)
+hPut ctx b = withTransport ctx (\t -> transportPut t $ b)
 
 hPuts :: DBusContext -> [ByteString] -> IO ()
-hPuts ctx bs = withHandle ctx (\h -> L.hPut h $ L.fromChunks bs)
+hPuts ctx bs = withTransport ctx (\t -> mapM_ (transportPut t) bs)
 
 hGetLine :: DBusContext -> IO ()
-hGetLine ctx = withHandle ctx BC.hGetLine >> return ()
+hGetLine ctx = withTransport ctx getTillEOL where
+	getTillEOL transport = do
+		v <- transportGet transport 1
+		if BC.singleton '\n' == v then return () else getTillEOL transport
 
 -- | authenticate to DBus using a UID.
 authenticateUID :: DBusContext -> Int -> IO ()
@@ -103,19 +117,19 @@ authenticate ctx auth = do
 	_ <- hGetLine ctx
 	hPut ctx "BEGIN\r\n"
 
-close :: DBusHandle -> IO ()
-close (DBusHandle h) = hClose h
+close :: DBusTransport -> IO ()
+close = transportClose
 
-connectUnix :: ByteString -> IO DBusHandle
+connectUnix :: ByteString -> IO Handle
 connectUnix addr = do
 	let sockaddr = SockAddrUnix $ BC.unpack addr
 	sock <- socket AF_UNIX Stream 0
 	connect sock sockaddr
 	h <- socketToHandle sock ReadWriteMode
 	hSetBuffering h NoBuffering
-	return $ DBusHandle h
+	return $ h
 
-connectOver :: ByteString -> [(ByteString, ByteString)] -> IO DBusHandle
+connectOver :: ByteString -> [(ByteString, ByteString)] -> IO Handle
 connectOver "unix" flags = do
 	let abstract = lookup "abstract" flags
 	case abstract of
@@ -125,29 +139,27 @@ connectOver "unix" flags = do
 connectOver _ _ = do
 	error "not implemented yet"
 
-connectSessionAt :: ByteString -> IO DBusHandle
+connectSessionAt :: ByteString -> IO Handle
 connectSessionAt addr = do
 	let (domain, flagstr) = second BC.tail $ BC.breakSubstring ":" addr
 	let flags = map (\x -> let (k:v:[]) = BC.split '=' x in (k,v)) $ BC.split ',' flagstr
 	connectOver domain flags
 
 -- | connect to the dbus session bus define by the environment variable DBUS_SESSION_BUS_ADDRESS
-connectSession :: IO DBusHandle
+connectSession :: IO Handle
 connectSession = BC.pack <$> getEnv "DBUS_SESSION_BUS_ADDRESS" >>= connectSessionAt
 
 -- | connect to the dbus system bus
-connectSystem :: IO DBusHandle
+connectSystem :: IO Handle
 connectSystem = connectUnix "/var/run/dbus/system_bus_socket"
 
--- | connect onto a previously open handle
-connectHandle :: Handle -> IO DBusHandle
-connectHandle h = return $ DBusHandle h
+-- | create a new DBus context from an handle
+contextNew :: Handle -> IO DBusContext
+contextNew h = contextNewWith (transportHandle h)
 
--- | create a new DBus context from a ini function to create a dbusHandle.
---withContext :: IO DBusHandle -> DBusContext a -> IO a
---withContext ini f = bracket ini close (\h -> evalStateT f (h,1))
-contextNew :: DBusHandle -> IO DBusContext
-contextNew h = liftM (DBusContext h) (newMVar 1)
+-- | create a new DBus context from a transport
+contextNewWith :: DBusTransport -> IO DBusContext
+contextNewWith transport = liftM (DBusContext transport) (newMVar 1)
 
 -- | create a new DBus context on session bus
 busGetSession :: IO DBusContext 
