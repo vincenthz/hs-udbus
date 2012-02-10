@@ -11,8 +11,7 @@
 -- Portability : unknown
 --
 module Network.DBus.Type
-	(
-	  ObjectPath
+	( ObjectPath
 	, DBusValue(..)
 	, DBusType(..)
 	, putValue
@@ -51,17 +50,20 @@ data DBusValue =
 	deriving (Show,Eq,Data,Typeable)
 
 class DBusType a where
+	toSignature   :: a -> SignatureElem
 	toDBusValue   :: a -> DBusValue
 	fromDBusValue :: DBusValue -> Maybe a
 
 #define SIMPLE_DBUS_INSTANCE(hsType,constructor) \
 	instance DBusType hsType where \
-	{ toDBusValue = constructor \
+	{ toSignature = sigType . constructor \
+	; toDBusValue = constructor \
 	; fromDBusValue (constructor x) = Just x \
 	; fromDBusValue _               = Nothing \
 	}
 
 instance DBusType DBusValue where
+	toSignature   = sigType
 	toDBusValue   = id
 	fromDBusValue = Just
 
