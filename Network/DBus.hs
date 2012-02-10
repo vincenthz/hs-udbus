@@ -17,7 +17,7 @@ module Network.DBus
 	, DBusReturn(..)
 	, DBusError(..)
 	, DBusSignal(..)
-	, DBusType(..)
+	, DBusValue(..)
 	, DBusMatchRules(..)
 	, defaultDBusMatchRules
 	, MessageType(..)

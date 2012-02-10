@@ -10,9 +10,9 @@
 module Network.DBus.Type
 	(
 	  ObjectPath
-	, DBusType(..)
-	, putType
-	, getType
+	, DBusValue(..)
+	, putValue
+	, getValue
 	, sigType
 	) where
 
@@ -27,7 +27,7 @@ import qualified Network.DBus.IEEE754 as IEEE754
 import Control.Applicative ((<$>))
 
 -- | DBus Types
-data DBusType =
+data DBusValue =
 	  DBusByte       Word8
 	| DBusBoolean    Bool
 	| DBusInt16      Int16
@@ -40,15 +40,15 @@ data DBusType =
 	| DBusString     String
 	| DBusObjectPath ObjectPath
 	| DBusSignature  Signature
-	| DBusArray      SignatureElem [DBusType]
-	| DBusStruct     Signature [DBusType]
-	| DBusDict       DBusType DBusType
-	| DBusVariant    DBusType
+	| DBusArray      SignatureElem [DBusValue]
+	| DBusStruct     Signature [DBusValue]
+	| DBusDict       DBusValue DBusValue
+	| DBusVariant    DBusValue
 	| DBusUnixFD     Word32
 	deriving (Show,Eq,Data,Typeable)
 
 -- | return signature element of a dbus type
-sigType :: DBusType -> SignatureElem
+sigType :: DBusValue -> SignatureElem
 sigType (DBusByte _)       = SigByte
 sigType (DBusBoolean _)    = SigBool
 sigType (DBusInt16 _)      = SigInt16
@@ -88,50 +88,50 @@ alignSigElement (SigArray _) = 4
 alignSigElement SigUnixFD = 4
 
 -- | serialize a dbus type
-putType :: DBusType -> PutWire
-putType (DBusByte w)       = putw8 w
-putType (DBusBoolean b)    = putw32 (if b then 1 else 0)
-putType (DBusInt16 i)      = putw16 $ fromIntegral i
-putType (DBusUInt16 w)     = putw16 w
-putType (DBusInt32 i)      = putw32 $ fromIntegral i
-putType (DBusUInt32 w)     = putw32 w
-putType (DBusInt64 i)      = putw64 $ fromIntegral i
-putType (DBusUInt64 w)     = putw64 w
-putType (DBusDouble d)     = putw64 $ IEEE754.encode d
-putType (DBusString s)     = putString s
-putType (DBusObjectPath s) = putObjectPath s
-putType (DBusSignature s)  = putSignature s
-putType (DBusUnixFD fd)    = putw32 fd
-putType (DBusStruct _ l)   = alignWrite 8 >> mapM_ putType l
-putType (DBusDict k v)     = putType (DBusStruct [] [k,v])
-putType (DBusVariant t)    = putSignature [sigType t] >> putType t
-putType (DBusArray s l)    = putw32 (fromIntegral len) >> alignWrite alignElement >> mapM_ putType l
+putValue :: DBusValue -> PutWire
+putValue (DBusByte w)       = putw8 w
+putValue (DBusBoolean b)    = putw32 (if b then 1 else 0)
+putValue (DBusInt16 i)      = putw16 $ fromIntegral i
+putValue (DBusUInt16 w)     = putw16 w
+putValue (DBusInt32 i)      = putw32 $ fromIntegral i
+putValue (DBusUInt32 w)     = putw32 w
+putValue (DBusInt64 i)      = putw64 $ fromIntegral i
+putValue (DBusUInt64 w)     = putw64 w
+putValue (DBusDouble d)     = putw64 $ IEEE754.encode d
+putValue (DBusString s)     = putString s
+putValue (DBusObjectPath s) = putObjectPath s
+putValue (DBusSignature s)  = putSignature s
+putValue (DBusUnixFD fd)    = putw32 fd
+putValue (DBusStruct _ l)   = alignWrite 8 >> mapM_ putValue l
+putValue (DBusDict k v)     = putValue (DBusStruct [] [k,v])
+putValue (DBusVariant t)    = putSignature [sigType t] >> putValue t
+putValue (DBusArray s l)    = putw32 (fromIntegral len) >> alignWrite alignElement >> mapM_ putValue l
 	where
 		len           = length l * sizeofElement
 		sizeofElement = 4
 		alignElement  = alignSigElement s
 
 -- | unserialize a dbus type from a signature Element
-getType :: SignatureElem -> GetWire DBusType
-getType SigByte   = DBusByte <$> getw8
-getType SigBool   = DBusBoolean . iToB <$> getw32 where iToB i = i == 1
-getType SigInt16  = DBusInt16 . fromIntegral <$> getw16
-getType SigUInt16 = DBusUInt16 <$> getw16
-getType SigInt32  = DBusInt32 . fromIntegral <$> getw32
-getType SigUInt32 = DBusUInt32 <$> getw32
-getType SigInt64  = DBusInt64 . fromIntegral <$> getw64
-getType SigUInt64 = DBusUInt64 <$> getw64
-getType SigDouble = DBusDouble . IEEE754.decode <$> getw64
-getType SigString = DBusString <$> getString
-getType SigObjectPath = DBusObjectPath <$> getObjectPath
-getType SigSignature  = DBusSignature <$> getSignature
-getType (SigDict k v) = getType (SigStruct [k,v])
-getType SigUnixFD     = DBusUnixFD <$> getw32
-getType SigVariant    = getVariant >>= getType >>= return . DBusVariant
-getType (SigStruct sigs) =
-	alignRead 8 >> mapM getType sigs >>= return . DBusStruct sigs
-getType (SigArray t)  = do
+getValue :: SignatureElem -> GetWire DBusValue
+getValue SigByte   = DBusByte <$> getw8
+getValue SigBool   = DBusBoolean . iToB <$> getw32 where iToB i = i == 1
+getValue SigInt16  = DBusInt16 . fromIntegral <$> getw16
+getValue SigUInt16 = DBusUInt16 <$> getw16
+getValue SigInt32  = DBusInt32 . fromIntegral <$> getw32
+getValue SigUInt32 = DBusUInt32 <$> getw32
+getValue SigInt64  = DBusInt64 . fromIntegral <$> getw64
+getValue SigUInt64 = DBusUInt64 <$> getw64
+getValue SigDouble = DBusDouble . IEEE754.decode <$> getw64
+getValue SigString = DBusString <$> getString
+getValue SigObjectPath = DBusObjectPath <$> getObjectPath
+getValue SigSignature  = DBusSignature <$> getSignature
+getValue (SigDict k v) = getValue (SigStruct [k,v])
+getValue SigUnixFD     = DBusUnixFD <$> getw32
+getValue SigVariant    = getVariant >>= getValue >>= return . DBusVariant
+getValue (SigStruct sigs) =
+	alignRead 8 >> mapM getValue sigs >>= return . DBusStruct sigs
+getValue (SigArray t)  = do
 	len <- getw32
 	alignRead (alignSigElement t)
-	l <- getMultiple (fromIntegral len) (getType t)
+	l <- getMultiple (fromIntegral len) (getValue t)
 	return $ DBusArray t l

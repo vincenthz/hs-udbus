@@ -93,7 +93,7 @@ data DBusHeader = DBusHeader
 	} deriving (Show,Eq)
 
 type BodyRaw = (Signature,ByteString)
-type Body = [DBusType]
+type Body = [DBusValue]
 
 type Interface = String
 type Member    = String
@@ -286,14 +286,14 @@ writeFields fields = putWire . (:[]) $ do
 
 -- | serialize body
 writeBody :: Body -> ByteString
-writeBody els = putWire (map putType els)
+writeBody els = putWire (map putValue els)
 
 signatureBody :: Body -> Signature
 signatureBody body = map sigType body
 
 -- | read message's body with a defined signature
 readBodyWith :: DBusMessage -> Signature -> Body
-readBodyWith m sigs = getWire (msgEndian m) 0 (mapM getType sigs) (msgBodyRaw m)
+readBodyWith m sigs = getWire (msgEndian m) 0 (mapM getValue sigs) (msgBodyRaw m)
 
 -- | read message's body using the signature field as reference
 readBody :: DBusMessage -> Body
