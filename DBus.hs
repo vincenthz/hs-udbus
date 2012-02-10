@@ -15,7 +15,7 @@ import Control.Concurrent
 
 main = do
 	con <- establish busGetSession authenticateWithRealUID
-	registerPath con "/" $ calltableFromList
+	registerCall con "/" $ calltableFromList
 		[ ("xyz", "example.test.dbus", \s sig b -> putStrLn (show s ++ ": " ++ show b))
 		]
 
