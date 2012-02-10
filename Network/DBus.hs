@@ -18,6 +18,8 @@ module Network.DBus
 	, DBusError(..)
 	, DBusSignal(..)
 	, DBusValue(..)
+	, Signature
+	, SignatureElem(..)
 	, DBusMatchRules(..)
 	, defaultDBusMatchRules
 	, MessageType(..)
