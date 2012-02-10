@@ -17,6 +17,6 @@ import Data.String
 newtype ObjectPath = ObjectPath { unObjectPath :: String }
 	deriving (Eq,Ord,Data,Typeable)
 instance Show ObjectPath where
-	show = show . unObjectPath
+	show = unObjectPath
 instance IsString ObjectPath where
 	fromString = ObjectPath
