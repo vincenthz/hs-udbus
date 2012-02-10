@@ -13,8 +13,6 @@ module Network.DBus.Internal
 
 import Data.Data
 import Data.String
-import qualified Data.ByteString.UTF8 as UTF8
-import Data.ByteString (ByteString)
 
 newtype ObjectPath = ObjectPath { unObjectPath :: String }
 	deriving (Eq,Ord,Data,Typeable)

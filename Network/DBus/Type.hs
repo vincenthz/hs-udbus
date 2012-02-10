@@ -19,7 +19,6 @@ module Network.DBus.Type
 import Data.Word
 import Data.Data
 import Data.Int
-import Data.ByteString (ByteString)
 import Network.DBus.Wire
 import Network.DBus.Signature
 import Network.DBus.Internal
