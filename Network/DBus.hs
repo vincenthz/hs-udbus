@@ -34,6 +34,10 @@ module Network.DBus
 	, calltableFromList
 	, registerPath
 	, unregisterPath
+	, registerCall
+	, unregisterCall
+	, registerSignal
+	, unregisterSignal
 	-- * create a new context on system or session bus
 	, busGetSystem
 	, busGetSession
@@ -51,6 +55,7 @@ import Network.DBus.Internal
 import Control.Concurrent (forkIO, ThreadId)
 import Control.Concurrent.MVar
 import Control.Exception
+import Data.Maybe
 import Control.Monad
 import qualified Data.Map as M
 import Data.List (intercalate)
@@ -60,10 +65,11 @@ type MessageVar  = MVar DBusMessage
 
 newMessageVar = newEmptyMVar
 
-type Callback = Serial -> Signature -> Body -> IO ()
-type CallTable = M.Map Member [(Interface, Callback)]
+type Signalback = BusName -> Signature -> Body -> IO ()
+type Callback   = Serial -> Signature -> Body -> IO ()
+type DispatchTable a = M.Map Member [(Interface, a)]
 
-calltableFromList :: [ (Member, Interface, Callback) ] -> CallTable
+calltableFromList :: [ (Member, Interface, a) ] -> DispatchTable a
 calltableFromList = foldl f M.empty where
 	f acc (member, intf, callback) = M.alter (appendOrCreate intf callback) member acc
 	appendOrCreate intf callback Nothing  = Just [(intf,callback)]
@@ -75,8 +81,8 @@ data DBusConnection = DBusConnection
 	{ connectionContext         :: DBusContext
 	, connectionSendLock        :: MVar ()
 	, connectionCallbacks       :: MVar (M.Map Serial MessageVar)
-	, connectionPaths           :: MVar (M.Map ObjectPath CallTable)
-	, connectionSignals         :: DBusSignal -> IO ()
+	, connectionPaths           :: MVar (M.Map ObjectPath (DispatchTable Callback))
+	, connectionSignals         :: MVar (M.Map ObjectPath (DispatchTable Signalback))
 	, connectionDefaultCallback :: DBusMessage -> IO ()
 	, connectionMainLoop        :: MVar ThreadId
 	}
@@ -159,25 +165,36 @@ registerCallback con serial = do
 	modifyMVar_ (connectionCallbacks con) (return . M.insert serial mvar)
 	return mvar
 
-registerPath con path callTable =
-	modifyMVar_ (connectionPaths con) (return . M.insert path callTable)
+registerPath_ f con path callTable =
+	modifyMVar_ (f con) (return . M.insert path callTable)
+unregisterPath_ f con path =
+	modifyMVar_ (f con) (return . M.delete path)
 
-unregisterPath con path =
-	modifyMVar_ (connectionPaths con) (return . M.delete path)
+registerCall = registerPath_ connectionPaths
+unregisterCall = unregisterPath_ connectionPaths
+
+{-# DEPRECATED registerPath "use registerCall" #-}
+registerPath = registerPath_ connectionPaths
+{-# DEPRECATED unregisterPath "use unregisterCall" #-}
+unregisterPath = unregisterPath_ connectionPaths
+
+registerSignal = registerPath_ connectionSignals
+unregisterSignal = unregisterPath_ connectionSignals
 
 runMainLoop = runMainLoopCatchall (\_ -> return ())
 
 runMainLoopCatchall catchAll context = do
 	callbacks <- newMVar M.empty
-	paths     <- newMVar M.empty
+	callPaths   <- newMVar M.empty
+	signalPaths <- newMVar M.empty
 	mainloopPid <- newEmptyMVar
 	sendLockVar <- newMVar ()
 
 	let con = DBusConnection
 		{ connectionContext         = context
 		, connectionCallbacks       = callbacks
-		, connectionPaths           = paths
-		, connectionSignals         = \_ -> return ()
+		, connectionPaths           = callPaths
+		, connectionSignals         = signalPaths
 		, connectionDefaultCallback = catchAll
 		, connectionMainLoop        = mainloopPid
 		, connectionSendLock        = sendLockVar
@@ -214,20 +231,28 @@ dispatcher con = forever loop where
 		case (fieldsPath fields, fieldsMember fields) of
 			(Just path, Just member) -> do
 				calltables   <- readMVar (connectionPaths con)
-				let mcallback = M.lookup path calltables >>= M.lookup member >>= getCall
+				let mcallback = findDispatchTable calltables path member (fieldsInterface fields)
 				case mcallback of
 					Nothing -> return True
 					Just c  -> c (msgSerial msg) (fieldsSignature fields) (readBody msg) >> return False
 			-- method call is not valid, so just ignore
 			_                        -> return False
-		where
-			getCall callbackList =
-				case fieldsInterface fields of
-					Nothing   -> safeHead $ map snd callbackList
-					Just intf -> lookup intf callbackList
 
-	signalCallback _ =
-		return True
+	signalCallback msg@(msgFields -> fields) =
+		case (fieldsPath fields, fieldsMember fields) of
+			(Just path, Just member) -> do
+				signaltables <- readMVar (connectionSignals con)
+				let mcallback = findDispatchTable signaltables path member (fieldsInterface fields)
+				case mcallback of
+					Nothing -> return True
+					Just c  -> c (fromJust $ fieldsSender fields) (fieldsSignature fields) (readBody msg) >> return False
+			-- signal is not valid, so just ignore
+			_                        -> return False
+
+	findDispatchTable table path member intf = M.lookup path table >>= M.lookup member >>= getCall where
+		getCall callbackList = case intf of
+			Nothing   -> safeHead $ map snd callbackList
+			Just i    -> lookup i callbackList
 
 	safeHead []    = Nothing
 	safeHead (x:_) = Just x
