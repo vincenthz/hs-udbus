@@ -1,5 +1,8 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 -- |
 -- Module      : Network.DBus.Type
 -- License     : BSD-style
@@ -11,6 +14,7 @@ module Network.DBus.Type
 	(
 	  ObjectPath
 	, DBusValue(..)
+	, DBusType(..)
 	, putValue
 	, getValue
 	, sigType
@@ -45,6 +49,33 @@ data DBusValue =
 	| DBusVariant    DBusValue
 	| DBusUnixFD     Word32
 	deriving (Show,Eq,Data,Typeable)
+
+class DBusType a where
+	toDBusValue   :: a -> DBusValue
+	fromDBusValue :: DBusValue -> Maybe a
+
+#define SIMPLE_DBUS_INSTANCE(hsType,constructor) \
+	instance DBusType hsType where \
+	{ toDBusValue = constructor \
+	; fromDBusValue (constructor x) = Just x \
+	; fromDBusValue _               = Nothing \
+	}
+
+instance DBusType DBusValue where
+	toDBusValue   = id
+	fromDBusValue = Just
+
+SIMPLE_DBUS_INSTANCE(Word8, DBusByte)
+SIMPLE_DBUS_INSTANCE(Bool, DBusBoolean)
+SIMPLE_DBUS_INSTANCE(Int16, DBusInt16)
+SIMPLE_DBUS_INSTANCE(Word16, DBusUInt16)
+SIMPLE_DBUS_INSTANCE(Int32, DBusInt32)
+SIMPLE_DBUS_INSTANCE(Word32, DBusUInt32)
+SIMPLE_DBUS_INSTANCE(Int64, DBusInt64)
+SIMPLE_DBUS_INSTANCE(Word64, DBusUInt64)
+SIMPLE_DBUS_INSTANCE(Double, DBusDouble)
+SIMPLE_DBUS_INSTANCE(String, DBusString)
+SIMPLE_DBUS_INSTANCE(ObjectPath, DBusObjectPath)
 
 -- | return signature element of a dbus type
 sigType :: DBusValue -> SignatureElem
