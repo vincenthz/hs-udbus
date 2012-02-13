@@ -19,6 +19,7 @@ module Network.DBus
 	, DBusSignal(..)
 	, DBusValue(..)
 	, DBusType(..)
+	, ObjectPath(..)
 	, Signature
 	, SignatureElem(..)
 	, DBusMatchRules(..)
