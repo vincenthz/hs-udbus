@@ -99,7 +99,6 @@ data DBusMatchRules = DBusMatchRules
 defaultDBusMatchRules = DBusMatchRules Nothing Nothing Nothing Nothing Nothing Nothing
 
 sendLock con f = withMVar (connectionSendLock con) $ \() -> f
---recvLock con f = f
 
 -- | Establish a new connection to dbus, using the two functions to
 -- first establish a new context, and second to authenticate to the bus.
