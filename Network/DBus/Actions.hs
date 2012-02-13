@@ -40,6 +40,8 @@ module Network.DBus.Actions
 	-- * from Signature module
 	, SignatureElem(..)
 	, Signature
+	, serializeSignature
+	, unserializeSignature
 
 	-- * from Type module
 	, ObjectPath(..)
@@ -64,6 +66,7 @@ import System.IO hiding (hGetLine)
 import Network.Socket
 import Network.DBus.Message
 import Network.DBus.Type
+import Network.DBus.Internal
 import Network.DBus.Signature
 
 data DBusTransport = DBusTransport
