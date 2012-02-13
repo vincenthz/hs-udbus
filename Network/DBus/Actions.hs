@@ -42,7 +42,7 @@ module Network.DBus.Actions
 	, Signature
 
 	-- * from Type module
-	, ObjectPath
+	, ObjectPath(..)
 	, DBusValue(..)
 	, DBusType(..)
 	) where
