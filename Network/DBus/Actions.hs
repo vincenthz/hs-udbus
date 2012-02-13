@@ -53,12 +53,10 @@ import Numeric (showHex)
 import Data.Char (ord)
 import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy as L
 
 import Control.Arrow
 import Control.Applicative ((<$>))
 import Control.Concurrent
-import Control.Exception
 import Control.Monad.State
 
 import System.Environment
