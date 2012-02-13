@@ -16,9 +16,7 @@ module Network.DBus.MessageType
 	, DBusReturn(..)
 	, DBusError(..)
 	, DBusSignal(..)
-	-- serialization functions to and from DBusMessage
-	, toDBusMessage
-	, fromDBusMessage
+	, DBusMessageable(..)
 	) where
 
 import Control.Exception

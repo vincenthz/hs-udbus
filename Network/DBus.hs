@@ -13,6 +13,7 @@ module Network.DBus
 	, establishWithCatchall
 	, DBusConnection
 	-- * Types
+	, DBusMessageable(..)
 	, DBusCall(..)
 	, DBusReturn(..)
 	, DBusError(..)
