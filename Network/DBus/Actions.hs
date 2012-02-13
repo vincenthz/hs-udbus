@@ -21,6 +21,7 @@ module Network.DBus.Actions
 	, busGetSession
 	, busGetSystem
 	, busGetNextSerial
+	, busClose
 
 	, messageSend
 	, messageSendWithSerial
@@ -170,6 +171,10 @@ busGetSession = connectSession >>= contextNew
 -- | create a new DBus context on system bus
 busGetSystem :: IO DBusContext
 busGetSystem = connectSystem >>= contextNew
+
+-- | close this DBus context
+busClose :: DBusContext -> IO ()
+busClose = transportClose . contextTransport
 
 -- | get the next serial usable, and increment the serial state.
 busGetNextSerial :: DBusContext -> IO Serial
