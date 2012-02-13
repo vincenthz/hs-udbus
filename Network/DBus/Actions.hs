@@ -44,6 +44,7 @@ module Network.DBus.Actions
 	-- * from Type module
 	, ObjectPath
 	, DBusValue(..)
+	, DBusType(..)
 	) where
 
 import Numeric (showHex)
