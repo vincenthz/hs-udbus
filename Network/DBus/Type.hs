@@ -164,7 +164,11 @@ getValue SigDouble = DBusDouble . IEEE754.decode <$> getw64
 getValue SigString = DBusString <$> getString
 getValue SigObjectPath = DBusObjectPath <$> getObjectPath
 getValue SigSignature  = DBusSignature <$> getSignature
-getValue (SigDict k v) = getValue (SigStruct [k,v])
+getValue (SigDict k v) = do
+	alignRead 8
+	key <- getValue k
+	val <- getValue v
+	return $ SigDict key val
 getValue SigUnixFD     = DBusUnixFD <$> getw32
 getValue SigVariant    = getVariant >>= getValue >>= return . DBusVariant
 getValue (SigStruct sigs) =
