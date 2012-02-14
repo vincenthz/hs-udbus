@@ -25,6 +25,7 @@ module Network.DBus.Wire
 	-- * putter
 	, PutWire
 	, putWire
+	, putBytes
 	, alignWrite
 	, putw8
 	, putw16

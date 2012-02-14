@@ -144,10 +144,10 @@ putValue (DBusUnixFD fd)    = putw32 fd
 putValue (DBusStruct _ l)   = alignWrite 8 >> mapM_ putValue l
 putValue (DBusDict k v)     = putValue (DBusStruct [] [k,v])
 putValue (DBusVariant t)    = putSignature [sigType t] >> putValue t
-putValue (DBusArray s l)    = putw32 (fromIntegral len) >> alignWrite alignElement >> mapM_ putValue l
+putValue (DBusArray s l)    = putw32 (fromIntegral len) >> alignWrite alignElement >> putBytes content
 	where
-		len           = length l * sizeofElement
-		sizeofElement = 4
+		len           = B.length content
+		content       = putWire [(mapM_ putValue l)]
 		alignElement  = alignSigElement s
 
 -- | unserialize a dbus type from a signature Element
