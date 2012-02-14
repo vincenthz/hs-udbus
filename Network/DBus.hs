@@ -1,4 +1,5 @@
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 -- |
 -- Module      : Network.DBus
 -- License     : BSD-style
@@ -21,6 +22,7 @@ module Network.DBus
 	, DBusValue(..)
 	, DBusType(..)
 	, ObjectPath(..)
+	, PackedString(..)
 	, Signature
 	, SignatureElem(..)
 	, DBusMatchRules(..)

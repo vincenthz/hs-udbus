@@ -47,6 +47,7 @@ module Network.DBus.Message
 	) where
 
 import Data.Word
+import Data.String
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 ()
@@ -255,12 +256,12 @@ readFields b = getWire LE 16 (getFields fieldsNew) b
 
 		getFieldVal :: Int -> GetWire (DBusFields -> DBusFields)
 		getFieldVal 1 = fieldsSetPath <$> getObjectPath
-		getFieldVal 2 = fieldsSetInterface <$> getString
-		getFieldVal 3 = fieldsSetMember <$> getString
-		getFieldVal 4 = fieldsSetErrorName  <$> getString
+		getFieldVal 2 = fieldsSetInterface . show <$> getString
+		getFieldVal 3 = fieldsSetMember . show <$> getString
+		getFieldVal 4 = fieldsSetErrorName . show <$> getString
 		getFieldVal 5 = fieldsSetReplySerial <$> getw32
-		getFieldVal 6 = fieldsSetDestination <$> getString
-		getFieldVal 7 = fieldsSetSender     <$> getString
+		getFieldVal 6 = fieldsSetDestination . show <$> getString
+		getFieldVal 7 = fieldsSetSender . show <$> getString
 		getFieldVal 8 = fieldsSetSignature  <$> getSignature
 		getFieldVal 9 = fieldsSetUnixFD    <$> getw32
 		getFieldVal n = error ("unknown field: " ++ show n)
@@ -270,15 +271,17 @@ readFields b = getWire LE 16 (getFields fieldsNew) b
 writeFields :: DBusFields -> ByteString
 writeFields fields = putWire . (:[]) $ do
 	putField 1 SigObjectPath putObjectPath $ fieldsPath fields
-	putField 2 SigString putString $ fieldsInterface fields
-	putField 3 SigString putString $ fieldsMember fields
-	putField 4 SigString putString $ fieldsErrorName fields
+	putField 2 SigString putUString $ fieldsInterface fields
+	putField 3 SigString putUString $ fieldsMember fields
+	putField 4 SigString putUString $ fieldsErrorName fields
 	putField 5 SigUInt32 putw32 $ fieldsReplySerial fields
-	putField 6 SigString putString $ fieldsDestination fields
-	putField 7 SigString putString $ fieldsSender fields
+	putField 6 SigString putUString $ fieldsDestination fields
+	putField 7 SigString putUString $ fieldsSender fields
 	putField 8 SigSignature putSignature $ if null (fieldsSignature fields) then Nothing else Just $ fieldsSignature fields
 	putField 9 SigUInt32 putw32 $ fieldsUnixFD fields
 	where
+		putUString = putString . fromString
+
 		putField :: Word8 -> SignatureElem -> (a -> PutWire) -> Maybe a -> PutWire
 		putField _ _ _      Nothing  = return ()
 		putField w s putter (Just v) =

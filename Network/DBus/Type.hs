@@ -22,6 +22,8 @@ module Network.DBus.Type
 import Data.Word
 import Data.Data
 import Data.Int
+import Data.String
+import qualified Data.ByteString as B
 import Network.DBus.Wire
 import Network.DBus.Signature
 import Network.DBus.Internal
@@ -39,7 +41,7 @@ data DBusValue =
 	| DBusInt64      Int64
 	| DBusUInt64     Word64
 	| DBusDouble     Double
-	| DBusString     String
+	| DBusString     PackedString
 	| DBusObjectPath ObjectPath
 	| DBusSignature  Signature
 	| DBusArray      SignatureElem [DBusValue]
@@ -76,8 +78,13 @@ SIMPLE_DBUS_INSTANCE(Word32, DBusUInt32)
 SIMPLE_DBUS_INSTANCE(Int64, DBusInt64)
 SIMPLE_DBUS_INSTANCE(Word64, DBusUInt64)
 SIMPLE_DBUS_INSTANCE(Double, DBusDouble)
-SIMPLE_DBUS_INSTANCE(String, DBusString)
 SIMPLE_DBUS_INSTANCE(ObjectPath, DBusObjectPath)
+
+instance DBusType String where
+	toSignature _ = SigString
+	toDBusValue = DBusString . fromString
+	fromDBusValue (DBusString s) = Just (show s)
+	fromDBusValue _              = Nothing
 
 -- | return signature element of a dbus type
 sigType :: DBusValue -> SignatureElem

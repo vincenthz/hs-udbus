@@ -40,6 +40,7 @@ import Data.Word
 import Data.Bits
 import Data.Binary.Get
 import Data.ByteString (ByteString)
+import Data.String
 import qualified Data.ByteString as B
 import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.ByteString.Lazy as L
@@ -107,15 +108,15 @@ getSignature = do
 getVariant :: GetWire SignatureElem
 getVariant = getSignatureOne
 
-getString :: GetWire String
+getString :: GetWire PackedString
 getString = do
 	nbBytes <- fromIntegral <$> getw32
 	s       <- liftGet $ getByteString nbBytes
 	_       <- getw8
-	return $ UTF8.toString s
+	return $ PackedString s
 
 getObjectPath :: GetWire ObjectPath
-getObjectPath = ObjectPath <$> getString
+getObjectPath = ObjectPath . show <$> getString
 
 getMultiple :: Show a => Int -> GetWire a -> GetWire [a]
 getMultiple 0 _ = return []
@@ -177,12 +178,11 @@ putw64 w = alignWrite 8 >> putBytes (B.pack le)
 		p7 = fromIntegral $ w `shiftR` 8
 		p8 = fromIntegral w
 
-putString :: String -> PutWire
-putString s = do
+putString :: PackedString -> PutWire
+putString (PackedString b) = do
 	putw32 (fromIntegral $ B.length b)
 	putBytes b
 	putw8 0
-	where b = UTF8.fromString s
 
 putSignature :: Signature -> PutWire
 putSignature sig = do
@@ -195,4 +195,4 @@ putVariant :: SignatureElem -> PutWire
 putVariant = putSignature . (:[])
 
 putObjectPath :: ObjectPath -> PutWire
-putObjectPath = putString . unObjectPath
+putObjectPath = putString . fromString . unObjectPath
