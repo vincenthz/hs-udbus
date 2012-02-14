@@ -168,7 +168,7 @@ getValue (SigDict k v) = do
 	alignRead 8
 	key <- getValue k
 	val <- getValue v
-	return $ SigDict key val
+	return $ DBusDict key val
 getValue SigUnixFD     = DBusUnixFD <$> getw32
 getValue SigVariant    = getVariant >>= getValue >>= return . DBusVariant
 getValue (SigStruct sigs) =
