@@ -25,8 +25,11 @@ module Network.DBus.Wire
 	-- * putter
 	, PutWire
 	, putWire
+	, putWireAt
+	, putWireGetPosition
 	, putBytes
 	, alignWrite
+	, alignWriteCalculate
 	, putw8
 	, putw16
 	, putw32
@@ -43,7 +46,6 @@ import Data.Binary.Get
 import Data.ByteString (ByteString)
 import Data.String
 import qualified Data.ByteString as B
-import qualified Data.ByteString.UTF8 as UTF8
 import qualified Data.ByteString.Lazy as L
 
 import Control.Applicative ((<$>))
@@ -131,18 +133,26 @@ getMultiple n f = do
 type PutWireM a = State (Int, [ByteString]) a
 type PutWire = PutWireM ()
 
+putWireGetPosition :: PutWireM Int
+putWireGetPosition = gets fst
+
+putWireAt :: Int -> [PutWire] -> ByteString
+putWireAt i f = B.concat $ reverse $ snd $ execState (sequence_ f) (i, [])
+
 putWire :: [PutWire] -> ByteString
-putWire f = B.concat $ reverse $ snd $ execState (sequence_ f) (0, [])
+putWire = putWireAt 0
 
 putBytes :: ByteString -> PutWire
 putBytes s = modify (\(i, l) -> (i + B.length s, s : l))
 
+alignWriteCalculate :: Int -> Int -> Int
+alignWriteCalculate n pos = negMod $ pos `mod` n
+	where
+		negMod 0 = 0
+		negMod x = n - x
+
 alignWrite :: Int -> PutWire
-alignWrite n = do
-	i <- fst <$> get
-	case i `mod` n of
-		0 -> return ()
-		x -> putBytes $ B.replicate (n - x) 0
+alignWrite n = gets (alignWriteCalculate n . fst) >>= \l -> putBytes $ B.replicate l 0
 
 putw8 :: Word8 -> PutWire
 putw8 = putBytes . B.singleton

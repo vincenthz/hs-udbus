@@ -144,11 +144,14 @@ putValue (DBusUnixFD fd)    = putw32 fd
 putValue (DBusStruct _ l)   = alignWrite 8 >> mapM_ putValue l
 putValue (DBusDict k v)     = putValue (DBusStruct [] [k,v])
 putValue (DBusVariant t)    = putSignature [sigType t] >> putValue t
-putValue (DBusArray s l)    = putw32 (fromIntegral len) >> alignWrite alignElement >> putBytes content
+putValue (DBusArray s l)    = do
+	pos <- putWireGetPosition
+	let alignmentStart = pos + alignWriteCalculate 4 pos + 4
+	let alignmentEnd   = alignmentStart + alignWriteCalculate alignElement alignmentStart
+	let content = putWireAt alignmentEnd [(mapM_ putValue l)]
+	putw32 (fromIntegral $ B.length content) >> alignWrite alignElement >> putBytes content
 	where
-		len           = B.length content
-		content       = putWire [(mapM_ putValue l)]
-		alignElement  = alignSigElement s
+		alignElement = alignSigElement s
 
 -- | unserialize a dbus type from a signature Element
 getValue :: SignatureElem -> GetWire DBusValue
