@@ -42,8 +42,10 @@ module Network.DBus.Message
 	, writeHeader
 	, readFields
 	, writeFields
+	, writeBody
 	, readBody
 	, readBodyWith
+	, readBodyRaw
 	) where
 
 import Data.Word
@@ -294,9 +296,13 @@ writeBody els = putWire (map putValue els)
 signatureBody :: Body -> Signature
 signatureBody body = map sigType body
 
+-- | process a raw body (byteString) with the specified endianness and signature.
+readBodyRaw :: DBusEndian -> Signature -> ByteString -> Body
+readBodyRaw endian sig = getWire endian 0 (mapM getValue sig)
+
 -- | read message's body with a defined signature
 readBodyWith :: DBusMessage -> Signature -> Body
-readBodyWith m sigs = getWire (msgEndian m) 0 (mapM getValue sigs) (msgBodyRaw m)
+readBodyWith m sigs = readBodyRaw (msgEndian m) sigs (msgBodyRaw m)
 
 -- | read message's body using the signature field as reference
 readBody :: DBusMessage -> Body
