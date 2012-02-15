@@ -53,6 +53,19 @@ Executable           dbus
   else
     Buildable:       False
 
+executable           Tests
+  Main-is:           Tests.hs
+  if flag(test)
+    Buildable:       True
+    Build-Depends:   base >= 3 && < 5
+                   , QuickCheck >= 2
+                   , test-framework
+                   , test-framework-quickcheck2
+                   , bytestring
+  else
+    Buildable:       False
+  ghc-options:       -Wall -fno-warn-orphans -fno-warn-missing-signatures
+
 source-repository head
   type: git
   location: git://github.com/vincenthz/hs-udbus
