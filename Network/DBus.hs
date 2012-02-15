@@ -23,6 +23,7 @@ module Network.DBus
 	, DBusType(..)
 	, ObjectPath(..)
 	, PackedString(..)
+	, packedStringToString
 	, Signature
 	, SignatureElem(..)
 	, DBusMatchRules(..)

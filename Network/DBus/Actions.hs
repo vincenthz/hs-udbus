@@ -46,6 +46,8 @@ module Network.DBus.Actions
 
 	-- * from Type module
 	, ObjectPath(..)
+	, PackedString(..)
+	, packedStringToString
 	, DBusValue(..)
 	, DBusType(..)
 	) where

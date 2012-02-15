@@ -10,6 +10,7 @@
 module Network.DBus.Internal
 	( ObjectPath(..)
 	, PackedString(..)
+	, packedStringToString
 	) where
 
 import Data.Data
@@ -29,4 +30,5 @@ newtype PackedString = PackedString { ustringToBS :: ByteString }
 instance IsString PackedString where
 	fromString = PackedString . UTF8.fromString
 instance Show PackedString where
-	show = UTF8.toString . ustringToBS
+	show = show . packedStringToString
+packedStringToString = UTF8.toString . ustringToBS
