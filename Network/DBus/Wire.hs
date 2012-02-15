@@ -119,7 +119,7 @@ getString = do
 	return $ PackedString s
 
 getObjectPath :: GetWire ObjectPath
-getObjectPath = ObjectPath . show <$> getString
+getObjectPath = ObjectPath . packedStringToString <$> getString
 
 getMultiple :: Show a => Int -> GetWire a -> GetWire [a]
 getMultiple 0 _ = return []
