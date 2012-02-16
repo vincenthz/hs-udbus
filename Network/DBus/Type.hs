@@ -29,6 +29,7 @@ import Network.DBus.Signature
 import Network.DBus.Internal
 import qualified Network.DBus.IEEE754 as IEEE754
 import Control.Applicative ((<$>))
+import Control.Monad (liftM)
 
 -- | DBus Types
 data DBusValue =
@@ -148,7 +149,7 @@ putValue (DBusArray s l)    = do
 	pos <- putWireGetPosition
 	let alignmentStart = pos + alignWriteCalculate 4 pos + 4
 	let alignmentEnd   = alignmentStart + alignWriteCalculate alignElement alignmentStart
-	let content = putWireAt alignmentEnd [(mapM_ putValue l)]
+	let content = putWireAt alignmentEnd [mapM_ putValue l]
 	putw32 (fromIntegral $ B.length content) >> alignWrite alignElement >> putBytes content
 	where
 		alignElement = alignSigElement s
@@ -173,9 +174,9 @@ getValue (SigDict k v) = do
 	val <- getValue v
 	return $ DBusDict key val
 getValue SigUnixFD     = DBusUnixFD <$> getw32
-getValue SigVariant    = getVariant >>= getValue >>= return . DBusVariant
+getValue SigVariant    = liftM DBusVariant (getVariant >>= getValue)
 getValue (SigStruct sigs) =
-	alignRead 8 >> mapM getValue sigs >>= return . DBusStruct sigs
+	liftM (DBusStruct sigs) (alignRead 8 >> mapM getValue sigs)
 getValue (SigArray t)  = do
 	len <- getw32
 	alignRead (alignSigElement t)

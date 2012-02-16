@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns #-}
 -- |
 -- Module      : Network.DBus.Actions
 -- License     : BSD-style
@@ -92,10 +91,10 @@ transportHandle h = DBusTransport
 	}
 
 hGet :: DBusContext -> Int -> IO ByteString
-hGet ctx i = withTransport ctx (\t -> transportGet t $ i)
+hGet ctx i = withTransport ctx (\t -> transportGet t i)
 
 hPut :: DBusContext -> ByteString -> IO ()
-hPut ctx b = withTransport ctx (\t -> transportPut t $ b)
+hPut ctx b = withTransport ctx (\t -> transportPut t b)
 
 hPuts :: DBusContext -> [ByteString] -> IO ()
 hPuts ctx bs = withTransport ctx (\t -> mapM_ (transportPut t) bs)
@@ -112,7 +111,7 @@ authenticateUID ctx uid = authenticate ctx hexencoded_uid
 	where
 		hexencoded_uid = BC.pack $ concatMap (hex2 . ord) $ show uid
 		hex2 a
-			| a < 0x10  = "0" ++ showHex a ""
+			| a < 0x10  = '0' : showHex a ""
 			| otherwise = showHex a ""
 
 -- | authenticate to DBus using a raw bytestring.
@@ -132,7 +131,7 @@ connectUnix addr = do
 	connect sock sockaddr
 	h <- socketToHandle sock ReadWriteMode
 	hSetBuffering h NoBuffering
-	return $ h
+	return h
 
 connectOver :: ByteString -> [(ByteString, ByteString)] -> IO Handle
 connectOver "unix" flags = do
@@ -141,8 +140,7 @@ connectOver "unix" flags = do
 		Nothing   -> error "no abstract path, use the normal path ..."
 		Just path -> connectUnix $ BC.concat ["\x00", path]
 
-connectOver _ _ = do
-	error "not implemented yet"
+connectOver _ _ = error "not implemented yet"
 
 connectSessionAt :: ByteString -> IO Handle
 connectSessionAt addr = do

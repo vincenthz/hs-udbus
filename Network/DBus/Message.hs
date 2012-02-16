@@ -195,7 +195,7 @@ messageFromHeader hdr = DBusMessage
 
 -- | unserialize a dbus header (16 bytes)
 readHeader :: ByteString -> DBusHeader
-readHeader b = getWire LE 0 getHeader b
+readHeader = getWire LE 0 getHeader
 	where getHeader = do
 		e      <- getw8
 		let bswap32 = id -- FIXME
@@ -207,7 +207,7 @@ readHeader b = getWire LE 0 getHeader b
 		serial <- swapf                 <$> getw32
 		flen   <- fromIntegral . swapf  <$> getw32
 
-		return $! DBusHeader
+		return DBusHeader
 			{ headerEndian       = if fromIntegral e /= fromEnum 'l' then BE else LE
 			, headerMessageType  = mt
 			, headerVersion      = ver
@@ -231,10 +231,10 @@ writeHeader hdr = putWire [putHeader]
 
 -- | unserialize dbus message fields
 readFields :: ByteString -> DBusFields
-readFields b = getWire LE 16 (getFields fieldsNew) b
+readFields = getWire LE 16 (getFields fieldsNew)
 	where
 		getFields :: DBusFields -> GetWire DBusFields
-		getFields fields = isWireEmpty >>= \empty -> if empty then return fields else (getField fields >>= getFields)
+		getFields fields = isWireEmpty >>= \empty -> if empty then return fields else getField fields >>= getFields
 
 		getField :: DBusFields -> GetWire DBusFields
 		getField fields = do
@@ -294,7 +294,7 @@ writeBody :: Body -> ByteString
 writeBody els = putWire (map putValue els)
 
 signatureBody :: Body -> Signature
-signatureBody body = map sigType body
+signatureBody = map sigType
 
 -- | process a raw body (byteString) with the specified endianness and signature.
 readBodyRaw :: DBusEndian -> Signature -> ByteString -> Body
