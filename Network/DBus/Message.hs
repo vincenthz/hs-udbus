@@ -221,7 +221,7 @@ readHeader = getWire LE 0 getHeader
 writeHeader :: DBusHeader -> ByteString
 writeHeader hdr = putWire [putHeader]
 	where putHeader = do
-		putw8 $ fromIntegral $ fromEnum $ if headerEndian hdr == BE then 'b' else 'l'
+		putw8 $ fromIntegral $ fromEnum $ if headerEndian hdr == BE then 'B' else 'l'
 		putw8 $ fromIntegral $ fromEnum $ headerMessageType hdr
 		putw8 $ fromIntegral $ headerFlags hdr
 		putw8 $ fromIntegral $ headerVersion hdr
