@@ -1,1 +1,4 @@
-dist/
+dist
+*.o
+*.hi
+*.tix
