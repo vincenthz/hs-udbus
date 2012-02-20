@@ -79,9 +79,10 @@ unserializeSignature :: ByteString -> Either String Signature
 unserializeSignature = runGet loop where
 	loop :: Get Signature
 	loop = do
-		o <- getOneNoCollection
 		r <- remaining
-		if r > 0 then liftM (o :) loop else return [o]
+		if r > 0
+			then getOneNoCollection >>= \o -> liftM (o :) loop
+			else return []
 	getOneNoCollection = getOne >>= \o -> case o of
 		Left _  -> error "parsing error, end of collection not in a collection"
 		Right z -> return z
