@@ -229,8 +229,8 @@ writeHeader hdr = putWire [putHeader]
 		putw32 $ fromIntegral $ headerFieldsLength hdr
 
 -- | unserialize dbus message fields
-readFields :: ByteString -> DBusFields
-readFields = getWire LE 16 (getFields fieldsNew)
+readFields :: DBusEndian -> ByteString -> DBusFields
+readFields endianness = getWire endianness 16 (getFields fieldsNew)
 	where
 		getFields :: DBusFields -> GetWire DBusFields
 		getFields fields = isWireEmpty >>= \empty -> if empty then return fields else getField fields >>= getFields

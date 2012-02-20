@@ -206,7 +206,7 @@ messageSend ctx msg = do
 messageRecv :: DBusContext -> IO DBusMessage
 messageRecv ctx = do
 	hdr    <- readHeader <$> hGet ctx 16
-	fields <- readFields <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)
+	fields <- readFields (headerEndian hdr) <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)
 	body   <- hGet ctx (headerBodyLength hdr)
 	return $ (messageFromHeader hdr) { msgFields = fields, msgBodyRaw = body }
 
