@@ -195,20 +195,19 @@ messageFromHeader hdr = DBusMessage
 
 -- | unserialize a dbus header (16 bytes)
 readHeader :: ByteString -> DBusHeader
-readHeader = getWire LE 0 getHeader
-	where getHeader = do
-		e      <- getw8
-		let bswap32 = id -- FIXME
-		let swapf = if fromIntegral e /= fromEnum 'l' then bswap32 else id
+readHeader b = getWire endianness 0 getHeader remainingBytes where
+	(firstByte,remainingBytes) = B.splitAt 1 b
+	endianness = if (fromIntegral $ B.head firstByte) /= fromEnum 'l' then BE else LE
+	getHeader = do
 		mt     <- toEnum . fromIntegral <$> getw8
 		flags  <- fromIntegral          <$> getw8
 		ver    <- fromIntegral          <$> getw8
-		blen   <- fromIntegral . swapf  <$> getw32
-		serial <- swapf                 <$> getw32
-		flen   <- fromIntegral . swapf  <$> getw32
+		blen   <- fromIntegral <$> getw32
+		serial <- getw32
+		flen   <- fromIntegral <$> getw32
 
 		return DBusHeader
-			{ headerEndian       = if fromIntegral e /= fromEnum 'l' then BE else LE
+			{ headerEndian       = endianness
 			, headerMessageType  = mt
 			, headerVersion      = ver
 			, headerFlags        = flags
