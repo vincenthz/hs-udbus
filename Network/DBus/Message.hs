@@ -195,7 +195,7 @@ messageFromHeader hdr = DBusMessage
 
 -- | unserialize a dbus header (16 bytes)
 readHeader :: ByteString -> DBusHeader
-readHeader b = getWire endianness 0 getHeader remainingBytes where
+readHeader b = getWire endianness 1 getHeader remainingBytes where
 	(firstByte,remainingBytes) = B.splitAt 1 b
 	endianness = if (fromIntegral $ B.head firstByte) /= fromEnum 'l' then BE else LE
 	getHeader = do
