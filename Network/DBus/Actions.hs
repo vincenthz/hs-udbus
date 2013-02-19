@@ -7,49 +7,49 @@
 -- Portability : unknown
 --
 module Network.DBus.Actions
-	( DBusContext
-	, DBusTransport(..)
-	, authenticate
-	, authenticateUID
+    ( DBusContext
+    , DBusTransport(..)
+    , authenticate
+    , authenticateUID
 
-	, connectSession
-	, connectSystem
-	, contextNew
-	, contextNewWith
+    , connectSession
+    , connectSystem
+    , contextNew
+    , contextNewWith
 
-	, busGetSession
-	, busGetSystem
-	, busGetNextSerial
-	, busClose
+    , busGetSession
+    , busGetSystem
+    , busGetNextSerial
+    , busClose
 
-	, messageSend
-	, messageSendWithSerial
-	, messageRecv
+    , messageSend
+    , messageSendWithSerial
+    , messageRecv
 
-	-- * from Message module
-	, MessageType(..)
-	, MessageFlag(..)
-	, DBusFields(..)
-	, DBusMessage(..)
-	, Serial
+    -- * from Message module
+    , MessageType(..)
+    , MessageFlag(..)
+    , DBusFields(..)
+    , DBusMessage(..)
+    , Serial
 
-	-- * read a message body
-	, readBody
-	, readBodyWith
+    -- * read a message body
+    , readBody
+    , readBodyWith
 
-	-- * from Signature module
-	, SignatureElem(..)
-	, Signature
-	, serializeSignature
-	, unserializeSignature
+    -- * from Signature module
+    , SignatureElem(..)
+    , Signature
+    , serializeSignature
+    , unserializeSignature
 
-	-- * from Type module
-	, ObjectPath(..)
-	, PackedString(..)
-	, packedStringToString
-	, DBusValue(..)
-	, DBusType(..)
-	) where
+    -- * from Type module
+    , ObjectPath(..)
+    , PackedString(..)
+    , packedStringToString
+    , DBusValue(..)
+    , DBusType(..)
+    ) where
 
 import Numeric (showHex)
 import Data.Char (ord)
@@ -70,25 +70,25 @@ import Network.DBus.Internal
 import Network.DBus.Signature
 
 data DBusTransport = DBusTransport
-	{ transportGet   :: Int -> IO ByteString
-	, transportPut   :: ByteString -> IO ()
-	, transportClose :: IO ()
-	}
+    { transportGet   :: Int -> IO ByteString
+    , transportPut   :: ByteString -> IO ()
+    , transportClose :: IO ()
+    }
 
 data DBusContext = DBusContext
-	{ contextTransport :: DBusTransport
-	, contextSerial    :: MVar Serial
-	}
+    { contextTransport :: DBusTransport
+    , contextSerial    :: MVar Serial
+    }
 
 withTransport :: DBusContext -> (DBusTransport -> IO a) -> IO a
 withTransport ctx f = f $ contextTransport ctx
 
 transportHandle :: Handle -> DBusTransport
 transportHandle h = DBusTransport
-	{ transportGet   = BC.hGet h
-	, transportPut   = BC.hPut h
-	, transportClose = hClose h
-	}
+                        { transportGet   = BC.hGet h
+                        , transportPut   = BC.hPut h
+                        , transportClose = hClose h
+                        }
 
 hGet :: DBusContext -> Int -> IO ByteString
 hGet ctx i = withTransport ctx (\t -> transportGet t i)
@@ -100,53 +100,52 @@ hPuts :: DBusContext -> [ByteString] -> IO ()
 hPuts ctx bs = withTransport ctx (\t -> mapM_ (transportPut t) bs)
 
 hGetLine :: DBusContext -> IO ()
-hGetLine ctx = withTransport ctx getTillEOL where
-	getTillEOL transport = do
-		v <- transportGet transport 1
-		if BC.singleton '\n' == v then return () else getTillEOL transport
+hGetLine ctx = withTransport ctx getTillEOL
+    where getTillEOL transport = do
+              v <- transportGet transport 1
+              if BC.singleton '\n' == v then return () else getTillEOL transport
 
 -- | authenticate to DBus using a UID.
 authenticateUID :: DBusContext -> Int -> IO ()
 authenticateUID ctx uid = authenticate ctx hexencoded_uid
-	where
-		hexencoded_uid = BC.pack $ concatMap (hex2 . ord) $ show uid
-		hex2 a
-			| a < 0x10  = '0' : showHex a ""
-			| otherwise = showHex a ""
+    where hexencoded_uid = BC.pack $ concatMap (hex2 . ord) $ show uid
+          hex2 a
+             | a < 0x10  = '0' : showHex a ""
+             | otherwise = showHex a ""
 
 -- | authenticate to DBus using a raw bytestring.
 authenticate :: DBusContext -> ByteString -> IO ()
 authenticate ctx auth = do
-	hPut ctx $ BC.concat ["\0AUTH EXTERNAL ", auth, "\r\n"]
-	_ <- hGetLine ctx
-	hPut ctx "BEGIN\r\n"
+    hPut ctx $ BC.concat ["\0AUTH EXTERNAL ", auth, "\r\n"]
+    _ <- hGetLine ctx
+    hPut ctx "BEGIN\r\n"
 
 close :: DBusTransport -> IO ()
 close = transportClose
 
 connectUnix :: ByteString -> IO Handle
 connectUnix addr = do
-	let sockaddr = SockAddrUnix $ BC.unpack addr
-	sock <- socket AF_UNIX Stream 0
-	connect sock sockaddr
-	h <- socketToHandle sock ReadWriteMode
-	hSetBuffering h NoBuffering
-	return h
+    let sockaddr = SockAddrUnix $ BC.unpack addr
+    sock <- socket AF_UNIX Stream 0
+    connect sock sockaddr
+    h <- socketToHandle sock ReadWriteMode
+    hSetBuffering h NoBuffering
+    return h
 
 connectOver :: ByteString -> [(ByteString, ByteString)] -> IO Handle
 connectOver "unix" flags = do
-	let abstract = lookup "abstract" flags
-	case abstract of
-		Nothing   -> error "no abstract path, use the normal path ..."
-		Just path -> connectUnix $ BC.concat ["\x00", path]
+    let abstract = lookup "abstract" flags
+    case abstract of
+        Nothing   -> error "no abstract path, use the normal path ..."
+        Just path -> connectUnix $ BC.concat ["\x00", path]
 
 connectOver _ _ = error "not implemented yet"
 
 connectSessionAt :: ByteString -> IO Handle
 connectSessionAt addr = do
-	let (domain, flagstr) = second BC.tail $ BC.breakSubstring ":" addr
-	let flags = map (\x -> let (k:v:[]) = BC.split '=' x in (k,v)) $ BC.split ',' flagstr
-	connectOver domain flags
+    let (domain, flagstr) = second BC.tail $ BC.breakSubstring ":" addr
+    let flags = map (\x -> let (k:v:[]) = BC.split '=' x in (k,v)) $ BC.split ',' flagstr
+    connectOver domain flags
 
 -- | connect to the dbus session bus define by the environment variable DBUS_SESSION_BUS_ADDRESS
 connectSession :: IO Handle
@@ -179,38 +178,38 @@ busClose = transportClose . contextTransport
 -- | get the next serial usable, and increment the serial state.
 busGetNextSerial :: DBusContext -> IO Serial
 busGetNextSerial ctx =
-	modifyMVar (contextSerial ctx) (\v -> return $! (v+1, v))
+    modifyMVar (contextSerial ctx) (\v -> return $! (v+1, v))
 
 -- | send one message to the bus with a predefined serial number.
 messageSendWithSerial :: DBusContext -> Serial -> DBusMessage -> IO ()
 messageSendWithSerial ctx serial msg = do
-	let fieldstr = writeFields (msgFields msg)
-	let fieldlen = BC.length fieldstr
-	let alignfields = alignVal 8 fieldlen - fieldlen
-	let header = (headerFromMessage msg)
-		{ headerBodyLength   = BC.length $ msgBodyRaw msg
-		, headerFieldsLength = fieldlen
-		, headerSerial       = serial }
-	hPuts ctx [ writeHeader header, fieldstr, BC.replicate alignfields '\0', msgBodyRaw msg ]
+    let fieldstr = writeFields (msgFields msg)
+    let fieldlen = BC.length fieldstr
+    let alignfields = alignVal 8 fieldlen - fieldlen
+    let header = (headerFromMessage msg)
+                    { headerBodyLength   = BC.length $ msgBodyRaw msg
+                    , headerFieldsLength = fieldlen
+                    , headerSerial       = serial }
+    hPuts ctx [ writeHeader header, fieldstr, BC.replicate alignfields '\0', msgBodyRaw msg ]
 
 -- | send one message to the bus
 -- note that the serial of the message sent is allocated here.
 messageSend :: DBusContext -> DBusMessage -> IO Serial
 messageSend ctx msg = do
-	serial <- busGetNextSerial ctx
-	messageSendWithSerial ctx serial msg
-	return serial
+    serial <- busGetNextSerial ctx
+    messageSendWithSerial ctx serial msg
+    return serial
 
 -- | receive one single message from the bus
 -- it is not necessarily the reply from a previous sent message.
 messageRecv :: DBusContext -> IO DBusMessage
 messageRecv ctx = do
-	hdr    <- readHeader <$> hGet ctx 16
-	fields <- readFields (headerEndian hdr) <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)
-	body   <- hGet ctx (headerBodyLength hdr)
-	return $ (messageFromHeader hdr) { msgFields = fields, msgBodyRaw = body }
+    hdr    <- readHeader <$> hGet ctx 16
+    fields <- readFields (headerEndian hdr) <$> hGet ctx (alignVal 8 $ headerFieldsLength hdr)
+    body   <- hGet ctx (headerBodyLength hdr)
+    return $ (messageFromHeader hdr) { msgFields = fields, msgBodyRaw = body }
 
 alignVal :: Int -> Int -> Int
 alignVal n x
-	| x `mod` n == 0 = x
-	| otherwise      = x + (n - (x `mod` n))
+    | x `mod` n == 0 = x
+    | otherwise      = x + (n - (x `mod` n))

@@ -11,13 +11,13 @@
 -- Portability : unknown
 --
 module Network.DBus.Type
-	( ObjectPath
-	, DBusValue(..)
-	, DBusType(..)
-	, putValue
-	, getValue
-	, sigType
-	) where
+    ( ObjectPath
+    , DBusValue(..)
+    , DBusType(..)
+    , putValue
+    , getValue
+    , sigType
+    ) where
 
 import Data.Word
 import Data.Data
@@ -33,42 +33,42 @@ import Control.Monad (liftM)
 
 -- | DBus Types
 data DBusValue =
-	  DBusByte       Word8
-	| DBusBoolean    Bool
-	| DBusInt16      Int16
-	| DBusUInt16     Word16
-	| DBusInt32      Int32
-	| DBusUInt32     Word32
-	| DBusInt64      Int64
-	| DBusUInt64     Word64
-	| DBusDouble     Double
-	| DBusString     PackedString
-	| DBusObjectPath ObjectPath
-	| DBusSignature  Signature
-	| DBusArray      SignatureElem [DBusValue]
-	| DBusStruct     Signature [DBusValue]
-	| DBusDict       DBusValue DBusValue
-	| DBusVariant    DBusValue
-	| DBusUnixFD     Word32
-	deriving (Show,Eq,Data,Typeable)
+      DBusByte       Word8
+    | DBusBoolean    Bool
+    | DBusInt16      Int16
+    | DBusUInt16     Word16
+    | DBusInt32      Int32
+    | DBusUInt32     Word32
+    | DBusInt64      Int64
+    | DBusUInt64     Word64
+    | DBusDouble     Double
+    | DBusString     PackedString
+    | DBusObjectPath ObjectPath
+    | DBusSignature  Signature
+    | DBusArray      SignatureElem [DBusValue]
+    | DBusStruct     Signature [DBusValue]
+    | DBusDict       DBusValue DBusValue
+    | DBusVariant    DBusValue
+    | DBusUnixFD     Word32
+    deriving (Show,Eq,Data,Typeable)
 
 class DBusType a where
-	toSignature   :: a -> SignatureElem
-	toDBusValue   :: a -> DBusValue
-	fromDBusValue :: DBusValue -> Maybe a
+    toSignature   :: a -> SignatureElem
+    toDBusValue   :: a -> DBusValue
+    fromDBusValue :: DBusValue -> Maybe a
 
 #define SIMPLE_DBUS_INSTANCE(hsType,constructor) \
-	instance DBusType hsType where \
-	{ toSignature = sigType . constructor \
-	; toDBusValue = constructor \
-	; fromDBusValue (constructor x) = Just x \
-	; fromDBusValue _               = Nothing \
-	}
+    instance DBusType hsType where \
+    { toSignature = sigType . constructor \
+    ; toDBusValue = constructor \
+    ; fromDBusValue (constructor x) = Just x \
+    ; fromDBusValue _               = Nothing \
+    }
 
 instance DBusType DBusValue where
-	toSignature   = sigType
-	toDBusValue   = id
-	fromDBusValue = Just
+    toSignature   = sigType
+    toDBusValue   = id
+    fromDBusValue = Just
 
 SIMPLE_DBUS_INSTANCE(Word8, DBusByte)
 SIMPLE_DBUS_INSTANCE(Bool, DBusBoolean)
@@ -82,10 +82,10 @@ SIMPLE_DBUS_INSTANCE(Double, DBusDouble)
 SIMPLE_DBUS_INSTANCE(ObjectPath, DBusObjectPath)
 
 instance DBusType String where
-	toSignature _ = SigString
-	toDBusValue = DBusString . fromString
-	fromDBusValue (DBusString s) = Just (show s)
-	fromDBusValue _              = Nothing
+    toSignature _ = SigString
+    toDBusValue = DBusString . fromString
+    fromDBusValue (DBusString s) = Just (show s)
+    fromDBusValue _              = Nothing
 
 -- | return signature element of a dbus type
 sigType :: DBusValue -> SignatureElem
@@ -146,13 +146,13 @@ putValue (DBusStruct _ l)   = alignWrite 8 >> mapM_ putValue l
 putValue (DBusDict k v)     = putValue (DBusStruct [] [k,v])
 putValue (DBusVariant t)    = putSignature [sigType t] >> putValue t
 putValue (DBusArray s l)    = do
-	pos <- putWireGetPosition
-	let alignmentStart = pos + alignWriteCalculate 4 pos + 4
-	let alignmentEnd   = alignmentStart + alignWriteCalculate alignElement alignmentStart
-	let content = putWireAt alignmentEnd [mapM_ putValue l]
-	putw32 (fromIntegral $ B.length content) >> alignWrite alignElement >> putBytes content
-	where
-		alignElement = alignSigElement s
+    pos <- putWireGetPosition
+    let alignmentStart = pos + alignWriteCalculate 4 pos + 4
+    let alignmentEnd   = alignmentStart + alignWriteCalculate alignElement alignmentStart
+    let content = putWireAt alignmentEnd [mapM_ putValue l]
+    putw32 (fromIntegral $ B.length content) >> alignWrite alignElement >> putBytes content
+    where
+        alignElement = alignSigElement s
 
 -- | unserialize a dbus type from a signature Element
 getValue :: SignatureElem -> GetWire DBusValue
@@ -169,16 +169,16 @@ getValue SigString = DBusString <$> getString
 getValue SigObjectPath = DBusObjectPath <$> getObjectPath
 getValue SigSignature  = DBusSignature <$> getSignature
 getValue (SigDict k v) = do
-	alignRead 8
-	key <- getValue k
-	val <- getValue v
-	return $ DBusDict key val
+    alignRead 8
+    key <- getValue k
+    val <- getValue v
+    return $ DBusDict key val
 getValue SigUnixFD     = DBusUnixFD <$> getw32
 getValue SigVariant    = liftM DBusVariant (getVariant >>= getValue)
 getValue (SigStruct sigs) =
-	liftM (DBusStruct sigs) (alignRead 8 >> mapM getValue sigs)
+    liftM (DBusStruct sigs) (alignRead 8 >> mapM getValue sigs)
 getValue (SigArray t)  = do
-	len <- getw32
-	alignRead (alignSigElement t)
-	l <- getMultiple (fromIntegral len) (getValue t)
-	return $ DBusArray t l
+    len <- getw32
+    alignRead (alignSigElement t)
+    l <- getMultiple (fromIntegral len) (getValue t)
+    return $ DBusArray t l

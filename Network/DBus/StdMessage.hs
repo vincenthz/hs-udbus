@@ -8,16 +8,16 @@
 -- Portability : unknown
 --
 module Network.DBus.StdMessage
-	(
-	-- * dbus server standard interface
-	  dbusDestination
-	, dbusPath
-	, dbusInterface
-	-- * dbus standard message
-	, msgDBusHello
-	, msgDBusListNames
-	, msgDBusAddMatch
-	) where
+    (
+    -- * dbus server standard interface
+      dbusDestination
+    , dbusPath
+    , dbusInterface
+    -- * dbus standard message
+    , msgDBusHello
+    , msgDBusListNames
+    , msgDBusAddMatch
+    ) where
 
 import Network.DBus.Message
 import Network.DBus.MessageType

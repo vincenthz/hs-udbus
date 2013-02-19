@@ -1,11 +1,10 @@
 import Text.Printf
-import Data.Word
 import Data.String
 import Test.QuickCheck
 import Test.Framework (defaultMain, testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
-import qualified Data.ByteString as B
+import qualified Data.ByteString as B ()
 import Network.DBus.Type
 import Network.DBus.Signature
 import Network.DBus.Internal
@@ -13,7 +12,6 @@ import Network.DBus.Message
 import Network.DBus.Wire
 import Control.Monad
 import Control.Applicative ((<$>))
-import System.IO
 
 -----------------------------------------------------------------------------------
 genSimpleSig =

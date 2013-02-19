@@ -7,12 +7,12 @@
 -- Portability : unknown
 --
 module Network.DBus.Signature
-	( Signature
-	, SignatureElem(..)
-	-- * serialization
-	, serializeSignature
-	, unserializeSignature
-	) where
+    ( Signature
+    , SignatureElem(..)
+    -- * serialization
+    , serializeSignature
+    , unserializeSignature
+    ) where
 
 import Data.Char (chr, ord)
 import Data.Data
@@ -24,24 +24,24 @@ import Control.Applicative ((<$>))
 
 -- | One possible signature element
 data SignatureElem =
-	  SigByte
-	| SigBool
-	| SigInt16
-	| SigUInt16
-	| SigInt32
-	| SigUInt32
-	| SigInt64
-	| SigUInt64
-	| SigDouble
-	| SigString
-	| SigObjectPath
-	| SigSignature
-	| SigArray SignatureElem
-	| SigStruct [SignatureElem]
-	| SigVariant
-	| SigDict SignatureElem SignatureElem
-	| SigUnixFD
-	deriving (Show,Eq,Data,Typeable)
+      SigByte
+    | SigBool
+    | SigInt16
+    | SigUInt16
+    | SigInt32
+    | SigUInt32
+    | SigInt64
+    | SigUInt64
+    | SigDouble
+    | SigString
+    | SigObjectPath
+    | SigSignature
+    | SigArray SignatureElem
+    | SigStruct [SignatureElem]
+    | SigVariant
+    | SigDict SignatureElem SignatureElem
+    | SigUnixFD
+    deriving (Show,Eq,Data,Typeable)
 
 -- | A list of signature element
 type Signature = [SignatureElem]
@@ -77,52 +77,52 @@ data SigStop = StopStruct | StopDict deriving (Eq)
 -- | unserialize a signature
 unserializeSignature :: ByteString -> Either String Signature
 unserializeSignature = runGet loop where
-	loop :: Get Signature
-	loop = do
-		r <- remaining
-		if r > 0
-			then getOneNoCollection >>= \o -> liftM (o :) loop
-			else return []
-	getOneNoCollection = getOne >>= \o -> case o of
-		Left _  -> error "parsing error, end of collection not in a collection"
-		Right z -> return z
-	getOne :: Get (Either SigStop SignatureElem)
-	getOne = do
-		t <- chr . fromIntegral <$> getWord8	
-		case t of
-			')' -> return $ Left StopStruct
-			'}' -> return $ Left StopDict
-			'y' -> return $ Right SigByte
-			'b' -> return $ Right SigBool
-			'n' -> return $ Right SigInt16
-			'q' -> return $ Right SigUInt16
-			'i' -> return $ Right SigInt32
-			'u' -> return $ Right SigUInt32
-			'x' -> return $ Right SigInt64
-			't' -> return $ Right SigUInt64
-			'd' -> return $ Right SigDouble
-			's' -> return $ Right SigString
-			'o' -> return $ Right SigObjectPath
-			'g' -> return $ Right SigSignature
-			'a' -> Right <$> getArray
-			'(' -> Right <$> getStruct
-			'v' -> return $ Right SigVariant
-			'{' -> Right <$> getDict
-			'h' -> return $ Right SigUnixFD
-			_   -> error ("unknown signature element: " ++ (show $ ord t))
-	getArray = SigArray <$> getOneNoCollection
-	getDict = do
-		l <- loopTill StopDict
-		case l of
-			[k,v] -> return $ SigDict k v
-			_     -> error "dictionary wrong size"
-	getStruct = do
-		l <- loopTill StopStruct
-		case l of
-			[] -> error "structure empty"
-			_  -> return $ SigStruct l
-	loopTill stop = do
-		o <- getOne
-		case o of
-			Left s ->  if stop == s then return [] else error "collection not terminated properly"
-			Right z -> liftM (z :) (loopTill stop)
+    loop :: Get Signature
+    loop = do
+        r <- remaining
+        if r > 0
+            then getOneNoCollection >>= \o -> liftM (o :) loop
+            else return []
+    getOneNoCollection = getOne >>= \o -> case o of
+        Left _  -> error "parsing error, end of collection not in a collection"
+        Right z -> return z
+    getOne :: Get (Either SigStop SignatureElem)
+    getOne = do
+        t <- chr . fromIntegral <$> getWord8    
+        case t of
+            ')' -> return $ Left StopStruct
+            '}' -> return $ Left StopDict
+            'y' -> return $ Right SigByte
+            'b' -> return $ Right SigBool
+            'n' -> return $ Right SigInt16
+            'q' -> return $ Right SigUInt16
+            'i' -> return $ Right SigInt32
+            'u' -> return $ Right SigUInt32
+            'x' -> return $ Right SigInt64
+            't' -> return $ Right SigUInt64
+            'd' -> return $ Right SigDouble
+            's' -> return $ Right SigString
+            'o' -> return $ Right SigObjectPath
+            'g' -> return $ Right SigSignature
+            'a' -> Right <$> getArray
+            '(' -> Right <$> getStruct
+            'v' -> return $ Right SigVariant
+            '{' -> Right <$> getDict
+            'h' -> return $ Right SigUnixFD
+            _   -> error ("unknown signature element: " ++ (show $ ord t))
+    getArray = SigArray <$> getOneNoCollection
+    getDict = do
+        l <- loopTill StopDict
+        case l of
+            [k,v] -> return $ SigDict k v
+            _     -> error "dictionary wrong size"
+    getStruct = do
+        l <- loopTill StopStruct
+        case l of
+            [] -> error "structure empty"
+            _  -> return $ SigStruct l
+    loopTill stop = do
+        o <- getOne
+        case o of
+            Left s ->  if stop == s then return [] else error "collection not terminated properly"
+            Right z -> liftM (z :) (loopTill stop)
