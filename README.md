@@ -17,14 +17,14 @@ extra care of the values sent.
 TODO & Caveats
 --------------
 
-Dbus endianness is not handle properly to serialize message if the user choose
-big endian. User should always select little endian regardless of the actual
-machine architecture. However, receiving message in both endianness is supported.
+User should always select little endian regardless of the actual machine
+architecture when creating message. However, receiving message in both
+endianness is supported.
 
-Double are expected to be handled as IEEE754 by the compiler. Serialization of double
-is handled in a GHC specific way (making the package GHC specific), expecting
-that any architecture represent double the IEEE754 way. So far, this seems to be
-true for every architecture supported by GHC.
+Double are expected to be handled as IEEE754 by the compiler. Serialization of
+double is handled in a GHC specific way (making the package GHC specific),
+expecting that any architecture represent double the IEEE754 way. So far, this
+seems to be true for every architecture supported by GHC.
 
 Stability
 ---------
