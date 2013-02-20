@@ -4,7 +4,7 @@ import Test.QuickCheck
 import Test.Framework (defaultMain, testGroup)
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 
-import qualified Data.ByteString as B ()
+import qualified Data.ByteString as B
 import Network.DBus.Type
 import Network.DBus.Signature
 import Network.DBus.Internal
@@ -56,6 +56,8 @@ instance Arbitrary PackedString where
 instance Arbitrary ObjectPath where
     arbitrary = ObjectPath <$> arbitrary
 
+arbitraryBS = B.pack <$> (choose (1,580) >>= \l -> replicateM l arbitrary)
+
 genBody :: Gen (Signature, [DBusValue])
 genBody = genSig >>= \sig -> (mapM sigToBody sig >>= \body ->return (sig,body)) where
     sigToBody SigByte       = DBusByte <$> arbitrary
@@ -72,8 +74,10 @@ genBody = genSig >>= \sig -> (mapM sigToBody sig >>= \body ->return (sig,body)) 
     sigToBody SigVariant    = sized genSigElem >>= sigToBody >>= return . DBusVariant
     sigToBody SigSignature  = DBusSignature <$> genSig
     sigToBody (SigStruct sigs) = mapM sigToBody sigs >>= return . DBusStruct sigs
-    sigToBody (SigArray sig) = mapM sigToBody (replicate 3 sig) >>= return . DBusArray sig
-    sigToBody _              = DBusString <$> arbitrary
+    sigToBody (SigArray sig)
+        | sig == SigByte       = DBusByteArray <$> arbitraryBS
+        | otherwise            = mapM sigToBody (replicate 3 sig) >>= return . DBusArray sig
+    sigToBody _                = DBusString <$> arbitrary
 
 data BodyContent = BodyContent Signature [DBusValue]
     deriving (Show,Eq)

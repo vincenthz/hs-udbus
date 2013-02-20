@@ -45,6 +45,7 @@ data DBusValue =
     | DBusString     PackedString
     | DBusObjectPath ObjectPath
     | DBusSignature  Signature
+    | DBusByteArray  B.ByteString       -- special case of the DBusArray
     | DBusArray      Type [DBusValue]
     | DBusStruct     Signature [DBusValue]
     | DBusDict       DBusValue DBusValue
@@ -103,6 +104,7 @@ sigType (DBusObjectPath _) = SigObjectPath
 sigType (DBusSignature _)  = SigSignature
 sigType (DBusStruct s _)   = SigStruct s
 sigType (DBusVariant _)    = SigVariant
+sigType (DBusByteArray _)  = SigArray SigByte
 sigType (DBusArray s _)    = SigArray s
 sigType (DBusDict k v)     = SigDict (sigType k) (sigType v)
 sigType (DBusUnixFD _)     = SigUnixFD
@@ -145,6 +147,9 @@ putValue (DBusUnixFD fd)    = putw32 fd
 putValue (DBusStruct _ l)   = alignWrite 8 >> mapM_ putValue l
 putValue (DBusDict k v)     = putValue (DBusStruct [] [k,v])
 putValue (DBusVariant t)    = putSignature [sigType t] >> putValue t
+putValue (DBusByteArray l)  =
+    putw32 (fromIntegral $ B.length l) >> alignWrite alignElement >> putBytes l
+    where alignElement = alignSigElement SigByte
 putValue (DBusArray s l)    = do
     pos <- putWireGetPosition
     let alignmentStart = pos + alignWriteCalculate 4 pos + 4
@@ -180,5 +185,6 @@ getValue (SigStruct sigs) =
 getValue (SigArray t)  = do
     len <- getw32
     alignRead (alignSigElement t)
-    l <- getMultiple (fromIntegral len) (getValue t)
-    return $ DBusArray t l
+    case t of
+        SigByte -> DBusByteArray <$> getBytes (fromIntegral len)
+        _       -> DBusArray t <$> getMultiple (fromIntegral len) (getValue t)
