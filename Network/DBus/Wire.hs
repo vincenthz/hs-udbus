@@ -21,6 +21,7 @@ module Network.DBus.Wire
     , getSignature
     , getVariant
     , getObjectPath
+    , getBytes
     , getMultiple
     -- * putter
     , PutWire
@@ -42,7 +43,7 @@ module Network.DBus.Wire
 
 import Data.Word
 import Data.Bits
-import Data.Binary.Get
+import Data.Binary.Get hiding (getBytes)
 import Data.ByteString (ByteString)
 import Data.String
 import qualified Data.ByteString as B
@@ -110,6 +111,8 @@ getSignature = do
 
 getVariant :: GetWire Type
 getVariant = getSignatureOne
+
+getBytes = liftGet . getByteString
 
 getString :: GetWire PackedString
 getString = do
