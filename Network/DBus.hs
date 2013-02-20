@@ -20,12 +20,13 @@ module Network.DBus
     , DBusError(..)
     , DBusSignal(..)
     , DBusValue(..)
-    , DBusType(..)
+    , DBusTypeable(..)
     , ObjectPath(..)
     , PackedString(..)
     , packedStringToString
+    , Type(..)
     , Signature
-    , SignatureElem(..)
+    , SignatureElem
     , DBusMatchRules(..)
     , defaultDBusMatchRules
     , MessageType(..)

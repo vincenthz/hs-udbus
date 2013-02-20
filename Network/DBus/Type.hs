@@ -13,7 +13,7 @@
 module Network.DBus.Type
     ( ObjectPath
     , DBusValue(..)
-    , DBusType(..)
+    , DBusTypeable(..)
     , putValue
     , getValue
     , sigType
@@ -45,27 +45,27 @@ data DBusValue =
     | DBusString     PackedString
     | DBusObjectPath ObjectPath
     | DBusSignature  Signature
-    | DBusArray      SignatureElem [DBusValue]
+    | DBusArray      Type [DBusValue]
     | DBusStruct     Signature [DBusValue]
     | DBusDict       DBusValue DBusValue
     | DBusVariant    DBusValue
     | DBusUnixFD     Word32
     deriving (Show,Eq,Data,Typeable)
 
-class DBusType a where
-    toSignature   :: a -> SignatureElem
+class DBusTypeable a where
+    toSignature   :: a -> Type
     toDBusValue   :: a -> DBusValue
     fromDBusValue :: DBusValue -> Maybe a
 
 #define SIMPLE_DBUS_INSTANCE(hsType,constructor) \
-    instance DBusType hsType where \
+    instance DBusTypeable hsType where \
     { toSignature = sigType . constructor \
     ; toDBusValue = constructor \
     ; fromDBusValue (constructor x) = Just x \
     ; fromDBusValue _               = Nothing \
     }
 
-instance DBusType DBusValue where
+instance DBusTypeable DBusValue where
     toSignature   = sigType
     toDBusValue   = id
     fromDBusValue = Just
@@ -81,14 +81,14 @@ SIMPLE_DBUS_INSTANCE(Word64, DBusUInt64)
 SIMPLE_DBUS_INSTANCE(Double, DBusDouble)
 SIMPLE_DBUS_INSTANCE(ObjectPath, DBusObjectPath)
 
-instance DBusType String where
+instance DBusTypeable String where
     toSignature _ = SigString
     toDBusValue = DBusString . fromString
     fromDBusValue (DBusString s) = Just (show s)
     fromDBusValue _              = Nothing
 
 -- | return signature element of a dbus type
-sigType :: DBusValue -> SignatureElem
+sigType :: DBusValue -> Type
 sigType (DBusByte _)       = SigByte
 sigType (DBusBoolean _)    = SigBool
 sigType (DBusInt16 _)      = SigInt16
@@ -108,7 +108,7 @@ sigType (DBusDict k v)     = SigDict (sigType k) (sigType v)
 sigType (DBusUnixFD _)     = SigUnixFD
 
 -- | return the alignement required for a specific signature element.
-alignSigElement :: SignatureElem -> Int
+alignSigElement :: Type -> Int
 alignSigElement SigByte = 1
 alignSigElement SigBool = 1
 alignSigElement SigInt16 = 2
@@ -155,7 +155,7 @@ putValue (DBusArray s l)    = do
         alignElement = alignSigElement s
 
 -- | unserialize a dbus type from a signature Element
-getValue :: SignatureElem -> GetWire DBusValue
+getValue :: Type -> GetWire DBusValue
 getValue SigByte   = DBusByte <$> getw8
 getValue SigBool   = DBusBoolean . iToB <$> getw32 where iToB i = i == 1
 getValue SigInt16  = DBusInt16 . fromIntegral <$> getw16

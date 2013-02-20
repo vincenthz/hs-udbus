@@ -8,7 +8,8 @@
 --
 module Network.DBus.Signature
     ( Signature
-    , SignatureElem(..)
+    , SignatureElem
+    , Type(..)
     -- * serialization
     , serializeSignature
     , unserializeSignature
@@ -23,7 +24,7 @@ import Control.Monad
 import Control.Applicative ((<$>))
 
 -- | One possible signature element
-data SignatureElem =
+data Type =
       SigByte
     | SigBool
     | SigInt16
@@ -36,20 +37,23 @@ data SignatureElem =
     | SigString
     | SigObjectPath
     | SigSignature
-    | SigArray SignatureElem
-    | SigStruct [SignatureElem]
+    | SigArray Type
+    | SigStruct [Type]
     | SigVariant
-    | SigDict SignatureElem SignatureElem
+    | SigDict Type Type
     | SigUnixFD
     deriving (Show,Eq,Data,Typeable)
 
+{-# DEPRECATED SignatureElem "use Type instead" #-}
+type SignatureElem = Type
+
 -- | A list of signature element
-type Signature = [SignatureElem]
+type Signature = [Type]
 
 marshallString :: String -> ByteString
 marshallString = B.pack . map (fromIntegral . ord)
 
-marshallSignatureElem :: SignatureElem -> ByteString
+marshallSignatureElem :: Type -> ByteString
 marshallSignatureElem SigByte       = marshallString "y"
 marshallSignatureElem SigBool       = marshallString "b"
 marshallSignatureElem SigInt16      = marshallString "n"

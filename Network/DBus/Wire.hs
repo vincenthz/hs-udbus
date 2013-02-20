@@ -92,7 +92,7 @@ getw32 = alignRead 4 >> onEndian (liftGet getWord32le) (liftGet getWord32be)
 getw64 :: GetWire Word64
 getw64 = alignRead 8 >> onEndian (liftGet getWord64le) (liftGet getWord64be)
 
-getSignatureOne :: GetWire SignatureElem
+getSignatureOne :: GetWire Type
 getSignatureOne = do
     sigs <- getSignature
     case sigs of
@@ -108,7 +108,7 @@ getSignature = do
         Left err  -> error err
         Right sig -> return sig
 
-getVariant :: GetWire SignatureElem
+getVariant :: GetWire Type
 getVariant = getSignatureOne
 
 getString :: GetWire PackedString
@@ -202,7 +202,7 @@ putSignature sig = do
     putw8 0
     where b = serializeSignature sig
 
-putVariant :: SignatureElem -> PutWire
+putVariant :: Type -> PutWire
 putVariant = putSignature . (:[])
 
 putObjectPath :: ObjectPath -> PutWire

@@ -30,11 +30,11 @@ genSimpleSig =
     , return SigVariant
     ]
 
-genSigElem :: Int -> Gen SignatureElem
+genSigElem :: Int -> Gen Type
 genSigElem 0 = oneof genSimpleSig
 genSigElem n = oneof (genSimpleSig ++ [ liftM SigArray subSig, liftM SigStruct (replicateM 2 subSig) ])
     where
-        subSig :: Gen SignatureElem
+        subSig :: Gen Type
         subSig = genSigElem (n `div` 2)
 
 genSig :: Gen Signature

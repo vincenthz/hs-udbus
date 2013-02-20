@@ -283,7 +283,7 @@ writeFields fields = putWire . (:[]) $ do
     where
         putUString = putString . fromString
 
-        putField :: Word8 -> SignatureElem -> (a -> PutWire) -> Maybe a -> PutWire
+        putField :: Word8 -> Type -> (a -> PutWire) -> Maybe a -> PutWire
         putField _ _ _      Nothing  = return ()
         putField w s putter (Just v) =
             alignWrite 8 >> putw8 w >> putVariant s >> putter v

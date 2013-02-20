@@ -38,7 +38,8 @@ module Network.DBus.Actions
     , readBodyWith
 
     -- * from Signature module
-    , SignatureElem(..)
+    , Type(..)
+    , SignatureElem
     , Signature
     , serializeSignature
     , unserializeSignature
@@ -48,7 +49,7 @@ module Network.DBus.Actions
     , PackedString(..)
     , packedStringToString
     , DBusValue(..)
-    , DBusType(..)
+    , DBusTypeable(..)
     ) where
 
 import Numeric (showHex)
