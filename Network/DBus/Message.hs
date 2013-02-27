@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 -- |
 -- Module      : Network.DBus.Message
 -- License     : BSD-style
@@ -27,12 +28,12 @@ module Network.DBus.Message
     , fieldsSetUnixFD
     -- * Message type
     , DBusMessage(..)
-    , BusName
+    , BusName(..)
     , Body
     , Serial
-    , ErrorName
-    , Member
-    , Interface
+    , ErrorName(..)
+    , Member(..)
+    , Interface(..)
     , messageNew
     , messageMapFields
     -- * Parsing and serializing functions
@@ -48,6 +49,7 @@ module Network.DBus.Message
     , readBodyRaw
     ) where
 
+import Data.Data
 import Data.Word
 import Data.String
 import Data.ByteString (ByteString)
@@ -56,6 +58,7 @@ import Data.ByteString.Char8 ()
 import Control.Applicative ((<$>))
 import Control.Monad.State
 
+import Network.DBus.Internal
 import Network.DBus.Wire
 import Network.DBus.Type
 import Network.DBus.Signature
@@ -98,10 +101,27 @@ data DBusHeader = DBusHeader
 type BodyRaw = (Signature,ByteString)
 type Body = [DBusValue]
 
-type Interface = String
-type Member    = String
-type BusName   = String
-type ErrorName = String
+newtype Interface = Interface { unInterface :: String }
+    deriving (Show,Eq,Ord)
+newtype Member    = Member { unMember :: String }
+    deriving (Show,Eq,Ord)
+newtype BusName   = BusName { unBusName :: String }
+    deriving (Show,Eq,Ord)
+newtype ErrorName = ErrorName { unErrorName :: String }
+    deriving (Show,Eq,Ord,Data,Typeable)
+
+instance IsString Interface where
+    fromString = Interface
+
+instance IsString Member where
+    fromString = Member
+
+instance IsString BusName where
+    fromString = BusName
+
+instance IsString ErrorName where
+    fromString = ErrorName
+
 type UnixFD    = Word32
 
 data DBusFields = DBusFields
@@ -257,13 +277,13 @@ readFields endianness = getWire endianness 16 (getFields fieldsNew)
 
         getFieldVal :: Int -> GetWire (DBusFields -> DBusFields)
         getFieldVal 1 = fieldsSetPath <$> getObjectPath
-        getFieldVal 2 = fieldsSetInterface . show <$> getString
-        getFieldVal 3 = fieldsSetMember . show <$> getString
-        getFieldVal 4 = fieldsSetErrorName . show <$> getString
+        getFieldVal 2 = fieldsSetInterface . fromString . packedStringToString <$> getString
+        getFieldVal 3 = fieldsSetMember . fromString . packedStringToString <$> getString
+        getFieldVal 4 = fieldsSetErrorName . fromString . packedStringToString <$> getString
         getFieldVal 5 = fieldsSetReplySerial <$> getw32
-        getFieldVal 6 = fieldsSetDestination . show <$> getString
-        getFieldVal 7 = fieldsSetSender . show <$> getString
-        getFieldVal 8 = fieldsSetSignature  <$> getSignature
+        getFieldVal 6 = fieldsSetDestination . fromString . packedStringToString <$> getString
+        getFieldVal 7 = fieldsSetSender . fromString . packedStringToString <$> getString
+        getFieldVal 8 = fieldsSetSignature <$> getSignature
         getFieldVal 9 = fieldsSetUnixFD    <$> getw32
         getFieldVal n = error ("unknown field: " ++ show n)
         
@@ -272,12 +292,12 @@ readFields endianness = getWire endianness 16 (getFields fieldsNew)
 writeFields :: DBusFields -> ByteString
 writeFields fields = putWire . (:[]) $ do
     putField 1 SigObjectPath putObjectPath $ fieldsPath fields
-    putField 2 SigString putUString $ fieldsInterface fields
-    putField 3 SigString putUString $ fieldsMember fields
-    putField 4 SigString putUString $ fieldsErrorName fields
+    putField 2 SigString (putUString . unInterface) $ fieldsInterface fields
+    putField 3 SigString (putUString . unMember) $ fieldsMember fields
+    putField 4 SigString (putUString . unErrorName) $ fieldsErrorName fields
     putField 5 SigUInt32 putw32 $ fieldsReplySerial fields
-    putField 6 SigString putUString $ fieldsDestination fields
-    putField 7 SigString putUString $ fieldsSender fields
+    putField 6 SigString (putUString . unBusName) $ fieldsDestination fields
+    putField 7 SigString (putUString . unBusName) $ fieldsSender fields
     putField 8 SigSignature putSignature $ if null (fieldsSignature fields) then Nothing else Just $ fieldsSignature fields
     putField 9 SigUInt32 putw32 $ fieldsUnixFD fields
     where

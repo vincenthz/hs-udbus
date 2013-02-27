@@ -30,6 +30,10 @@ module Network.DBus
     , DBusMatchRules(..)
     , defaultDBusMatchRules
     , MessageType(..)
+    , BusName(..)
+    , ErrorName(..)
+    , Member(..)
+    , Interface(..)
     -- * standard way to interact with dbus
     , addMatch
     -- * main loop creation
@@ -152,11 +156,11 @@ addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> retur
     where
         serialized = intercalate "," $ filter (not . null)
             [ mm "type"        show $ matchType mr
-            , mm "sender"      id $ matchSender mr
-            , mm "interface"   id $ matchInterface mr
-            , mm "member"      id $ matchMember mr
+            , mm "sender"      unBusName $ matchSender mr
+            , mm "interface"   unInterface $ matchInterface mr
+            , mm "member"      unMember $ matchMember mr
             , mm "path"        unObjectPath $ matchPath mr
-            , mm "destination" id $ matchDestination mr
+            , mm "destination" unBusName $ matchDestination mr
             ]
         mm key f = maybe "" (surroundQuote key . f)
         surroundQuote key v = concat [ key, "='",  v, "'" ]
