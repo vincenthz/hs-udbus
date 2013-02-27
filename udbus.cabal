@@ -1,5 +1,5 @@
 Name:                udbus
-Version:             0.2
+Version:             0.2.0
 Description:         Small and flexible implementation of the dbus protocol.
 License:             BSD3
 License-file:        LICENSE
