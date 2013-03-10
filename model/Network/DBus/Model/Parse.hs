@@ -11,33 +11,36 @@ module Network.DBus.Model.Parse
 
 import Control.Applicative
 
-import qualified Text.XML.HaXml as X
---import Text.XML.HaXml (o)
---import qualified Network.DBus as DBus
+import Text.XML.Light
 import qualified Network.DBus.Actions as DBus (unserializeSignature)
 import Network.DBus.Model.Types
 
 import qualified Data.ByteString.Char8 as BC
 import Data.List (partition)
-import Data.Maybe (catMaybes)
 
 fromXML :: String -> Maybe Model
-fromXML s = Model <$> mapM parseInterface (childElems "interface" root)
-    where X.Document _ _ root _ = X.xmlParse "" s
+fromXML s = el >>= parseNode
+    where el = parseXMLDoc s
 
-parseInterface :: X.Element i -> Maybe Interface
+tpNS = Just "tp"
+
+parseNode :: Element -> Maybe Model
+parseNode e = Model <$> mapM parseInterface (childElems "interface" e)
+                    <*> attr "name" e
+                    <*> pure (attrFQ (Just "xmlns") "tp" e)
+
 parseInterface e =
     Interface <$> parseName e
               <*> mapM parseMethod (childElems "method" e)
               <*> mapM parseSignal (childElems "signal" e)
               <*> mapM parseProperty (childElems "property" e)
-              <*> mapM parseEnumeration (childElems "tp:enum" e)
-              <*> mapM parseFlags (childElems "tp:flags" e)
-              <*> mapM parseStruct (childElems "tp:struct" e)
+              <*> mapM parseEnumeration (childElemsFQ tpNS "enum" e)
+              <*> mapM parseFlags (childElemsFQ tpNS "flags" e)
+              <*> mapM parseStruct (childElemsFQ tpNS "struct" e)
 
 parseStruct e =
     Struct <$> parseName e
-           <*> mapM parseMember (childElems "tp:member" e)
+           <*> mapM parseMember (childElemsFQ tpNS "member" e)
 
 parseMember e =
     Member <$> parseName e
@@ -48,7 +51,7 @@ parseMember e =
 parseEnumeration e =
     Enumeration <$> parseName e
                 <*> parseType e
-                <*> mapM parseEnumValue (childElems "tp:enumvalue" e)
+                <*> mapM parseEnumValue (childElemsFQ tpNS "enumvalue" e)
 
 parseEnumValue e =
     EnumValue <$> attr "suffix" e
@@ -58,7 +61,7 @@ parseFlags e =
     Flags <$> parseName e
           <*> attr "value-prefix" e
           <*> parseType e
-          <*> mapM parseFlag (childElems "flag" e)
+          <*> mapM parseFlag (childElemsFQ tpNS "flag" e)
           <*> parseDoc e
 
 parseFlag e =
@@ -113,32 +116,28 @@ parseAccess e = attr "access" e >>= parse
           parse "readwrite" = Just ReadWrite
           parse _           = Nothing
 
-parseRawType e = attrFQ (Just $ X.Namespace "tp" "") "type" e
+parseRawType e = attrFQ tpNS "type" e
 
 parseName e = attr "name" e
 
-parseDoc :: X.Element i -> Maybe (Maybe Doc)
-parseDoc e = pure $ case childElems "tp:docstring" e of
-                         [(X.Elem _ _ [X.CString _ cd _])] -> Just cd
-                         _   -> Nothing
+parseDoc e = pure $ case childElemsFQ tpNS "docstring" e of
+                         [el] -> case elContent el of
+                                      [Text t] -> Just $ cdData t
+                                      z        -> error (show z)
+                         _    -> Nothing
 
 ------------------------------------------------------
 -- XML helpers
 
-childElemsWith :: X.CFilter i -> X.Element i -> [X.Element i]
-childElemsWith elemFilter (X.Elem _ _ contents) =
-    catMaybes . map select . concatMap elemFilter $ contents
-    where
-          select (X.CElem e _) = Just e
-          select _             = Nothing
+childElemsFQ :: Maybe String -> String -> Element -> [Element]
+childElemsFQ ns name el = filterChildren ((qnameEqNoUrl ns name) . elName) el
 
-childElems :: String -> X.Element i -> [X.Element i]
-childElems name = childElemsWith (X.tag name)
+childElems name el = childElemsFQ Nothing name el
 
-attrFQ :: Maybe X.Namespace -> String -> X.Element i -> Maybe String
-attrFQ ns name (X.Elem _ attrs _) = show <$> lookup el attrs
-    where el = maybe (X.N name) (\n -> X.QN n name) ns
+attrFQ :: Maybe String -> String -> Element -> Maybe String
+attrFQ ns name el = lookupAttrBy (qnameEqNoUrl ns name) $ elAttribs el
 
-attr :: String -> X.Element i -> Maybe String
 attr = attrFQ Nothing
 
+qnameEqNoUrl :: Maybe String -> String -> QName -> Bool
+qnameEqNoUrl pre n qn = qName qn == n && qPrefix qn == pre

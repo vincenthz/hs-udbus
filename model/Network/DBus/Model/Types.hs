@@ -31,6 +31,8 @@ import qualified Network.DBus as DBus
 -- | The whole XML model
 data Model = Model
     { interfaces :: [Interface]
+    , nodeName   :: String
+    , nodeXmlns  :: Maybe String
     } deriving (Show,Eq)
 
 -- | An DBus XML interface containing methods, signals and properties
