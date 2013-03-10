@@ -1,5 +1,5 @@
 Name:                udbus-model
-Version:             0.2.0
+Version:             0.2.1
 Description:         Model API for udbus introspection and definitions
 License:             BSD3
 License-file:        LICENSE
