@@ -49,6 +49,10 @@ module Network.DBus
     , unregisterCall
     , registerSignal
     , unregisterSignal
+    -- * Types to interact with the dispatcher
+    , Signalback
+    , Callback
+    , DispatchTable
     -- * create a new context on system or session bus
     , busGetSystem
     , busGetSession
@@ -126,6 +130,8 @@ establishWithCatchall catchall createContext auth = do
     _   <- auth ctx
     runMainLoopCatchall catchall ctx
 
+-- | call a method on the DBus, and wait synchronously
+-- for the return value.
 call :: DBusConnection -> BusName -> DBusCall -> IO DBusReturn
 call con destination c = do
     let msg = messageMapFields (fieldsSetDestination destination) $ toDBusMessage c
@@ -151,6 +157,8 @@ call con destination c = do
         errorFromDBusMessage :: DBusMessage -> Maybe DBusError
         errorFromDBusMessage = fromDBusMessage
 
+-- | Add a match rules which will cause to receive message that aren't directed
+-- to this connection but match this rule.
 addMatch :: DBusConnection -> DBusMatchRules -> IO ()
 addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> return ()
     where
@@ -165,6 +173,12 @@ addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> retur
         mm key f = maybe "" (surroundQuote key . f)
         surroundQuote key v = concat [ key, "='",  v, "'" ]
 
+-- | Send an arbitrary DBusMessageable message on the bus, using
+-- a new serial value. the serial value allocated is returned to
+-- the caller.
+--
+-- PS: completely misnamed.
+reply :: DBusMessageable a => DBusConnection -> IO Serial
 reply con rep = do
     let msg = toDBusMessage rep
     sendLock con $ messageSend (connectionContext con) msg
@@ -179,7 +193,12 @@ registerPath_ f con path callTable =
 unregisterPath_ f con path =
     modifyMVar_ (f con) (return . M.delete path)
 
+-- | Register a method handler table for a specific object path
+registerCall :: DBusConnection -> ObjectPath -> DispatchTable Callback -> IO ()
 registerCall = registerPath_ connectionPaths
+
+-- | Unregister all method handlers for a specific object path
+unregisterCall :: DBusConnection -> ObjectPath -> DispatchTable Callback -> IO ()
 unregisterCall = unregisterPath_ connectionPaths
 
 {-# DEPRECATED registerPath "use registerCall" #-}
@@ -187,11 +206,21 @@ registerPath = registerPath_ connectionPaths
 {-# DEPRECATED unregisterPath "use unregisterCall" #-}
 unregisterPath = unregisterPath_ connectionPaths
 
+-- | Register a signal handler table for a specific object path
+registerSignal :: DBusConnection -> ObjectPath -> DispatchTable Signalback -> IO ()
 registerSignal = registerPath_ connectionSignals
+
+-- | Unregister all signals handler for a specific object path
+unregisterSignal :: DBusConnection -> ObjectPath -> IO ()
 unregisterSignal = unregisterPath_ connectionSignals
 
+-- | run a main DBus loop which will create a new dispatcher
+-- handshake on the bus and wait for message to dispatch
 runMainLoop = runMainLoopCatchall (\_ -> return ())
 
+-- | similar to 'runMainLoop' but also give the ability to specify
+-- a catch-all-message callback for any message that are not handled
+-- by specific function.
 runMainLoopCatchall catchAll context = do
     callbacks   <- newMVar M.empty
     callPaths   <- newMVar M.empty
@@ -214,6 +243,9 @@ runMainLoopCatchall catchAll context = do
     _ <- call con dbusDestination msgDBusHello
     return con
 
+-- | A dispatcher is forever waiting for new
+-- message on the dbus and dispatch them according
+-- to the tables.
 dispatcher con = forever loop where
     loop = do
         msg      <- messageRecv (connectionContext con)
