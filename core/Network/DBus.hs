@@ -178,7 +178,7 @@ addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> retur
 -- the caller.
 --
 -- PS: completely misnamed.
-reply :: DBusMessageable a => DBusConnection -> IO Serial
+reply :: DBusMessageable a => DBusConnection -> a -> IO Serial
 reply con rep = do
     let msg = toDBusMessage rep
     sendLock con $ messageSend (connectionContext con) msg
@@ -198,7 +198,7 @@ registerCall :: DBusConnection -> ObjectPath -> DispatchTable Callback -> IO ()
 registerCall = registerPath_ connectionPaths
 
 -- | Unregister all method handlers for a specific object path
-unregisterCall :: DBusConnection -> ObjectPath -> DispatchTable Callback -> IO ()
+unregisterCall :: DBusConnection -> ObjectPath -> IO ()
 unregisterCall = unregisterPath_ connectionPaths
 
 {-# DEPRECATED registerPath "use registerCall" #-}
