@@ -12,6 +12,7 @@ module Network.DBus
     -- * handle connections to DBus
       establish
     , establishWithCatchall
+    , disconnect
     , DBusConnection
     -- * Types
     , DBusMessageable(..)
@@ -66,7 +67,7 @@ import Network.DBus.Actions
 import Network.DBus.Message
 import Network.DBus.MessageType
 import Network.DBus.StdMessage
-import Control.Concurrent (forkIO, ThreadId)
+import Control.Concurrent (forkIO, killThread, ThreadId)
 import Control.Concurrent.MVar
 import Control.Exception
 import Data.Maybe
@@ -129,6 +130,20 @@ establishWithCatchall catchall createContext auth = do
     ctx <- createContext
     _   <- auth ctx
     runMainLoopCatchall catchall ctx
+
+-- | Close dbus socket and stop mainloop thread.
+disconnect :: DBusConnection -> IO ()
+disconnect conn = do
+    mtid <- tryTakeMVar (connectionMainLoop conn)
+    when (isJust mtid) $ do
+        killThread (fromJust mtid)
+        busClose (connectionContext conn)
+        _ <- swapMVar (connectionPaths conn) M.empty
+        _ <- swapMVar (connectionSignals conn) M.empty
+        callbacks <- swapMVar (connectionCallbacks conn) M.empty
+        forM_ (M.toList callbacks) $ \(_, mvar) ->
+            putMVar mvar $ toDBusMessage $
+              DBusError 0 (ErrorName "org.freedesktop.dbus.disconnected") []
 
 -- | call a method on the DBus, and wait synchronously
 -- for the return value.
