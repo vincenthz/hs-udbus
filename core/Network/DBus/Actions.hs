@@ -12,8 +12,11 @@ module Network.DBus.Actions
     , authenticate
     , authenticateUID
 
-    , connectSession
     , connectSystem
+    , connectSession
+    , connectTo
+    , connectOver
+    , connectUnix
     , contextNew
     , contextNewWith
 
@@ -142,15 +145,15 @@ connectOver "unix" flags = do
 
 connectOver _ _ = error "not implemented yet"
 
-connectSessionAt :: ByteString -> IO Handle
-connectSessionAt addr = do
+connectTo :: ByteString -> IO Handle
+connectTo addr = do
     let (domain, flagstr) = second BC.tail $ BC.breakSubstring ":" addr
     let flags = map (\x -> let (k:v:[]) = BC.split '=' x in (k,v)) $ BC.split ',' flagstr
     connectOver domain flags
 
 -- | connect to the dbus session bus define by the environment variable DBUS_SESSION_BUS_ADDRESS
 connectSession :: IO Handle
-connectSession = BC.pack <$> getEnv "DBUS_SESSION_BUS_ADDRESS" >>= connectSessionAt
+connectSession = BC.pack <$> getEnv "DBUS_SESSION_BUS_ADDRESS" >>= connectTo
 
 -- | connect to the dbus system bus
 connectSystem :: IO Handle
