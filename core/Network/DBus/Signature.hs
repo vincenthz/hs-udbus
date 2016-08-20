@@ -21,7 +21,6 @@ import Data.Serialize.Get
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Control.Monad
-import Control.Applicative ((<$>))
 
 -- | One possible signature element
 data Type =

@@ -23,7 +23,7 @@ Flag executable
   Default:           False
 
 Library
-  Build-Depends:     base >= 3 && < 5
+  Build-Depends:     base >= 4.8 && < 5
                    , binary
                    , cereal
                    , bytestring

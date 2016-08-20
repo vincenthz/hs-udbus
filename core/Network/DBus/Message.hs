@@ -55,7 +55,6 @@ import Data.String
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import Data.ByteString.Char8 ()
-import Control.Applicative ((<$>))
 import Control.Monad.State
 
 import Network.DBus.Internal

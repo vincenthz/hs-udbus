@@ -28,7 +28,6 @@ import Network.DBus.Wire
 import Network.DBus.Signature
 import Network.DBus.Internal
 import qualified Network.DBus.IEEE754 as IEEE754
-import Control.Applicative ((<$>))
 import Control.Monad (liftM)
 
 -- | DBus Types

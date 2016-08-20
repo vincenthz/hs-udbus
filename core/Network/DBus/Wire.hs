@@ -49,7 +49,6 @@ import Data.String
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as L
 
-import Control.Applicative ((<$>))
 import Control.Monad.Reader
 import Control.Monad.State
 import Network.DBus.Signature
