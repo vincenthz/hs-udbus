@@ -58,7 +58,6 @@ import Data.ByteString.Char8 (ByteString)
 import qualified Data.ByteString.Char8 as BC
 
 import Control.Arrow
-import Control.Applicative ((<$>))
 import Control.Concurrent
 import Control.Monad.State
 
