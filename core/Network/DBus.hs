@@ -185,7 +185,9 @@ addMatch con mr = call con dbusDestination (msgDBusAddMatch serialized) >> retur
             , mm "path"        unObjectPath $ matchPath mr
             , mm "destination" unBusName $ matchDestination mr
             ]
+        mm :: String -> (a -> String) -> Maybe a -> String
         mm key f = maybe "" (surroundQuote key . f)
+        surroundQuote :: String -> String -> String
         surroundQuote key v = concat [ key, "='",  v, "'" ]
 
 -- | Send an arbitrary DBusMessageable message on the bus, using
