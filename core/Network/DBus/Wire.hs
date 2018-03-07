@@ -59,7 +59,7 @@ data DBusEndian = LE | BE deriving (Show,Eq)
 type DBusGet = (DBusEndian, Int) -- Specified endianness and alignment of this context.
 
 newtype GetWire a = GetWire { runGW :: ReaderT DBusGet Get a }
-    deriving (Monad, MonadReader DBusGet, Functor)
+    deriving (Functor, Applicative, Monad, MonadReader DBusGet)
 
 getWire :: DBusEndian -> Int -> GetWire a -> ByteString -> a
 getWire endian align f b = runGet (runReaderT (runGW f) (endian,align)) (L.fromChunks [b])

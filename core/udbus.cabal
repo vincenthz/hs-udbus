@@ -1,5 +1,5 @@
 Name:                udbus
-Version:             0.2.0
+Version:             0.2.3
 Description:         Small and flexible implementation of the dbus protocol.
 License:             BSD3
 License-file:        LICENSE
@@ -23,8 +23,13 @@ Flag executable
   Default:           False
 
 Library
-  Build-Depends:     base >= 3 && < 5
-                   , binary
+  if impl(ghc < 8.0)
+    Buildable: False
+  else
+    if impl(ghc)
+          Build-Depends: base
+
+  Build-Depends:     binary
                    , cereal
                    , bytestring
                    , utf8-string
@@ -57,7 +62,7 @@ executable           Tests
   Main-is:           Tests.hs
   if flag(test)
     Buildable:       True
-    Build-Depends:   base >= 3 && < 5
+    Build-Depends:   base
                    , QuickCheck >= 2
                    , test-framework
                    , test-framework-quickcheck2

@@ -19,7 +19,7 @@ module Network.DBus.MessageType
     , DBusMessageable(..)
     ) where
 
-import Control.Exception
+import Control.Exception hiding (TypeError)
 import Data.Data
 import Network.DBus.Message
 import Network.DBus.Type
